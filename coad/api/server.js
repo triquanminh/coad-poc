@@ -13,14 +13,14 @@ app.use(express.json())
 
 // Health check endpoint for publisher websites (no registration)
 app.post('/api/health-check', async (req, res) => {
-  const { url } = req.body
+  const { url, checkSDK } = req.body
 
   if (!url) {
     return res.status(400).json({ error: 'URL is required' })
   }
 
   try {
-    console.log(`Performing health check for: ${url}`)
+    console.log(`Performing health check for: ${url}${checkSDK ? ' (with SDK check)' : ''}`)
 
     // Measure response time
     const startTime = Date.now()
@@ -39,6 +39,25 @@ app.post('/api/health-check', async (req, res) => {
     const domElements = $('*').length
     const pageTitle = $('title').text() || 'No title found'
     const metaDescription = $('meta[name="description"]').attr('content') || 'No description found'
+
+    // Check for SDK installation if requested
+    let sdkDetected = false
+    let sdkDetails = null
+
+    if (checkSDK) {
+      // Look for COAD SDK script
+      const sdkScript = $('script[src*="adsdk.js"]').length > 0
+      const coadConfig = response.data.includes('window.COADConfig') || response.data.includes('COADConfig')
+      const publisherIdMatch = response.data.match(/publisherId:\s*['"]([^'"]+)['"]/i)
+
+      sdkDetected = sdkScript && coadConfig
+      sdkDetails = {
+        scriptFound: sdkScript,
+        configFound: coadConfig,
+        publisherId: publisherIdMatch ? publisherIdMatch[1] : null,
+        sdkUrl: sdkScript ? $('script[src*="adsdk.js"]').attr('src') : null
+      }
+    }
 
     // Analyze page structure and suggest ad placements
     const suggestions = []
@@ -112,7 +131,9 @@ app.post('/api/health-check', async (req, res) => {
       suggestions,
       timestamp: new Date().toISOString(),
       pageTitle,
-      metaDescription
+      metaDescription,
+      sdkDetected: checkSDK ? sdkDetected : undefined,
+      sdkDetails: checkSDK ? sdkDetails : undefined
     }
 
     res.json(healthCheckResult)
@@ -215,18 +236,24 @@ app.post('/api/publisher/register', async (req, res) => {
 app.get('/api/publishers', async (req, res) => {
   try {
     const websites = await db.getAllWebsites()
-    const publishers = websites.map(website => ({
-      publisherId: website.publisher_id,
-      websiteId: website.id,
-      url: website.url,
-      title: website.title,
-      description: website.description,
-      status: website.status,
-      healthStatus: website.health_status,
-      responseTime: website.response_time,
-      domElements: website.dom_elements,
-      createdAt: website.created_at,
-      updatedAt: website.updated_at
+    const publishers = await Promise.all(websites.map(async (website) => {
+      // Get placement count for each website
+      const placements = await db.getAdPlacementsByPublisherId(website.publisher_id)
+
+      return {
+        publisherId: website.publisher_id,
+        websiteId: website.id,
+        url: website.url,
+        title: website.title,
+        description: website.description,
+        status: website.status,
+        healthStatus: website.health_status,
+        responseTime: website.response_time,
+        domElements: website.dom_elements,
+        createdAt: website.created_at,
+        updatedAt: website.updated_at,
+        placementCount: placements.length
+      }
     }))
     res.json(publishers)
   } catch (error) {
@@ -312,6 +339,38 @@ app.get('/api/publisher/:publisherId/placements', async (req, res) => {
   }
 })
 
+// Delete a specific ad placement
+app.delete('/api/publisher/:publisherId/placements/:selector', async (req, res) => {
+  const { publisherId, selector } = req.params
+
+  try {
+    const decodedSelector = decodeURIComponent(selector)
+    console.log(`[DELETE PLACEMENT] Publisher: ${publisherId}, Selector: ${decodedSelector}`)
+
+    // Check if publisher exists
+    const website = await db.getWebsiteByPublisherId(publisherId)
+    if (!website) {
+      return res.status(404).json({ error: 'Publisher not found' })
+    }
+
+    // Delete the placement
+    const result = await db.deleteAdPlacement(publisherId, decodedSelector)
+
+    if (result.changes > 0) {
+      console.log(`[DELETE PLACEMENT] Successfully deleted placement: ${decodedSelector}`)
+      res.json({
+        message: 'Placement deleted successfully',
+        selector: decodedSelector
+      })
+    } else {
+      res.status(404).json({ error: 'Placement not found' })
+    }
+  } catch (error) {
+    console.error('Error deleting placement:', error.message)
+    res.status(500).json({ error: 'Failed to delete placement' })
+  }
+})
+
 // Remove ad placement
 app.delete('/api/placement/:placementId', async (req, res) => {
   const { placementId } = req.params
@@ -365,7 +424,69 @@ app.get('/api/publisher/:publisherId', async (req, res) => {
 
 
 
-// Bot configuration endpoint (for AdSDK)
+// Bot configuration endpoint by domain (for AdSDK auto-detection)
+app.get('/api/bot/config-by-domain', async (req, res) => {
+  const { domain, url } = req.query
+
+  if (!domain && !url) {
+    return res.status(400).json({ error: 'Domain or URL parameter is required' })
+  }
+
+  try {
+    console.log(`[SDK CONFIG] Looking up config for domain: ${domain || url}`)
+
+    // Try to find website by exact URL match first
+    let website = null
+    if (url) {
+      website = await db.getWebsiteByUrl(url)
+    }
+
+    // If not found by exact URL, try to find by domain
+    if (!website && domain) {
+      const websites = await db.getAllWebsites()
+      website = websites.find(w => {
+        try {
+          const websiteUrl = new URL(w.url)
+          const websiteDomain = websiteUrl.hostname
+          return websiteDomain === domain || websiteDomain === `www.${domain}` || domain === `www.${websiteDomain}`
+        } catch (e) {
+          return false
+        }
+      })
+    }
+
+    if (!website) {
+      console.log(`[SDK CONFIG] No configuration found for domain: ${domain || url}`)
+      return res.status(404).json({
+        error: 'No publisher configuration found for this domain',
+        domain: domain || url,
+        suggestion: 'Please register this website in the COAD publisher dashboard'
+      })
+    }
+
+    const placements = await db.getAdPlacementsByPublisherId(website.publisher_id)
+
+    console.log(`[SDK CONFIG] Found config for ${website.url} (Publisher: ${website.publisher_id})`)
+
+    // Return configuration for the bot
+    res.json({
+      publisherId: website.publisher_id,
+      website: website.url,
+      placements: placements.map(p => p.selector),
+      placementDetails: placements,
+      adServerUrl: 'http://localhost:8080/api/ads',
+      refreshInterval: 30000, // 30 seconds
+      enabled: website.status === 'active',
+      autoDetected: true,
+      matchedBy: url ? 'exact-url' : 'domain'
+    })
+  } catch (error) {
+    console.error('Error fetching bot config by domain:', error.message)
+    res.status(500).json({ error: 'Failed to fetch bot configuration' })
+  }
+})
+
+// Bot configuration endpoint (for AdSDK) - Legacy support
 app.get('/api/bot/config/:publisherId', async (req, res) => {
   const { publisherId } = req.params
 
@@ -385,7 +506,7 @@ app.get('/api/bot/config/:publisherId', async (req, res) => {
       placements: placements.map(p => p.selector),
       placementDetails: placements,
       adServerUrl: 'http://localhost:8080/api/ads',
-      refreshInterval: 30000, // 30 seconds
+      refreshInterval: 10000, // 10 seconds
       enabled: website.status === 'active'
     })
   } catch (error) {
@@ -432,25 +553,137 @@ app.get('/api/ads', async (req, res) => {
     }
 
     // Always return a consistent ad for reliability
+    // Array of real ad banners with proper HTML containers
+    const adBanners = [
+      {
+        imageUrl: 'https://img.freepik.com/free-vector/beautiful-cosmetic-ad_23-2148471068.jpg?semt=ais_hybrid&w=740',
+        width: '400',
+        height: '300',
+        title: 'Top 1% perfume',
+        clickUrl: 'https://oseff.com?ads=perfume'
+      },
+      {
+        imageUrl: 'https://marketplace.canva.com/EAGcEvo0NCs/1/0/1131w/canva-yellow-and-black-burger-promotional-poster-zO5UenmZ_fg.jpg',
+        width: '500',
+        height: '800',
+        title: 'The best of the burger',
+        clickUrl: 'https://oseff.com?ads=burger'
+      },
+      {
+        imageUrl: 'https://d3jmn01ri1fzgl.cloudfront.net/photoadking/webp_thumbnail/sky-blue-special-offer-end-of-season-advertisement-template-mhj19nd2e69bf2.webp',
+        width: '400',
+        height: '400',
+        title: 'End of season sale',
+        clickUrl: 'https://oseff.com?ads=season-sale'
+      },
+      {
+        imageUrl: 'https://c8.alamy.com/comp/P6BF1C/summer-sale-with-paper-cut-symbol-and-icon-for-advertising-beach-background-art-and-craft-style-use-for-ads-banner-poster-card-cover-stickers-P6BF1C.jpg',
+        width: '600',
+        height: '400',
+        title: 'Summer Sale',
+        clickUrl: 'https://oseff.com?ads=summer-sale'
+      },
+      {
+        imageUrl: 'https://assets.entrepreneur.com/content/3x2/2000/1593193401-fairandlovelyedited.jpg',
+        width: '1000',
+        height: '800',
+        title: 'Your skins must be glowing',
+        clickUrl: 'https://oseff.com?ads=skin-care'
+      }
+    ];
+
+    // Select a random ad banner
+    const selectedAd = adBanners[Math.floor(Math.random() * adBanners.length)];
+
+    // Create HTML content for the iframe with proper image containment
+    const adHtmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          body {
+            width: ${selectedAd.width}px;
+            height: ${selectedAd.height}px;
+            overflow: hidden;
+            cursor: pointer;
+            position: relative;
+          }
+          .ad-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+          }
+          .ad-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+            display: block;
+          }
+          .ad-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0,0,0,0.7));
+            color: white;
+            padding: 8px 12px;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+          }
+          .ad-container:hover {
+            transform: scale(1.02);
+            transition: transform 0.2s ease;
+          }
+        </style>
+      </head>
+      <body onclick="window.open('${selectedAd.clickUrl}', '_blank')">
+        <div class="ad-container">
+          <img src="${selectedAd.imageUrl}" alt="${selectedAd.title}" class="ad-image">
+          <div class="ad-overlay">${selectedAd.title}</div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    // Create data URL for the iframe
+    const dataUrl = 'data:text/html;charset=utf-8,' + encodeURIComponent(adHtmlContent);
+
     const mockAd = {
       id: `ad_${Date.now()}`,
       type: 'banner',
-      content: `<div style="
-        background: red;
-        color: white;
-        padding: 20px;
-        text-align: center;
-        border-radius: 8px;
-        margin: 10px 0;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        font-family: Arial, sans-serif;
-      ">
-        <h3 style="margin: 0 0 10px 0; font-size: 18px;">🎯 COAD Demo Ad</h3>
-        <p style="margin: 0; font-size: 14px; opacity: 0.9;">Placement: ${placement}</p>
-        <p style="margin: 5px 0 0 0; font-size: 12px; opacity: 0.7;">Publisher: ${publisherId}</p>
-      </div>`,
-      width: 'auto',
-      height: 'auto'
+      content: `<iframe
+        src="${dataUrl}"
+        width="${selectedAd.width}"
+        height="${selectedAd.height}"
+        frameborder="0"
+        scrolling="no"
+        style="
+          border: none;
+          border-radius: 8px;
+          margin: 10px 0;
+          box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+          max-width: 100%;
+          display: block;
+        "
+        sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+        title="${selectedAd.title}"
+        loading="lazy">
+      </iframe>`,
+      width: selectedAd.width,
+      height: selectedAd.height
     }
 
     console.log(`[AD SERVED] Successfully served ad ${mockAd.id} to ${publisherId}`)
@@ -631,7 +864,8 @@ app.listen(PORT, () => {
   console.log('- DELETE /api/publisher/:id - Delete publisher')
   console.log('- POST /api/publisher/:id/placements - Add ad placement')
   console.log('- GET  /api/publisher/:id/placements - Get ad placements')
-  console.log('- GET  /api/bot/config/:id - Get bot config')
+  console.log('- GET  /api/bot/config-by-domain - Auto-detect config by domain')
+  console.log('- GET  /api/bot/config/:id - Get bot config (legacy)')
   console.log('- GET  /api/ads - Serve ads')
   console.log('- GET  /api/admin/publishers - Admin: Get all publishers')
   console.log('- DELETE /api/admin/publishers/:id - Admin: Delete publisher')

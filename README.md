@@ -115,18 +115,29 @@ npm install
 npm start    # Runs on http://localhost:4001
 ```
 
-### SDK Integration
-Publishers add this code to their website:
+### SDK Integration (Zero-Configuration!)
+Publishers now only need **one line** of code:
 ```html
-<script>
-  window.COADConfig = {
-    publisherId: 'your-publisher-id',
-    website: 'your-website.com',
-    placements: ['.content', 'header', 'footer']
-  };
-</script>
 <script src="http://localhost:4001/adsdk.js" async></script>
 ```
+
+**That's it!** The SDK automatically:
+- 🔍 **Detects the current domain**
+- 🔍 **Looks up publisher configuration** from our API
+- 🔍 **Loads the appropriate ad placements**
+- 🔍 **Starts serving ads immediately**
+
+### How Auto-Detection Works
+1. **Domain Detection**: SDK reads `window.location.hostname`
+2. **API Lookup**: Calls `/api/bot/config-by-domain?domain=example.com`
+3. **Configuration Loading**: Retrieves publisher ID, placements, and settings
+4. **Ad Serving**: Automatically creates containers and loads ads
+
+### Benefits
+- ✅ **No Publisher ID needed** - Completely automatic
+- ✅ **No manual configuration** - Zero maintenance
+- ✅ **Works immediately** - Just add the script tag
+- ✅ **Dynamic updates** - New placements work without code changes
 
 ## Complete System Architecture
 
@@ -270,7 +281,8 @@ The system uses SQLite with the following tables:
 - `DELETE /api/placement/:id` - Remove ad placement
 
 ### Bot Configuration
-- `GET /api/bot/config/:publisherId` - Get bot configuration for publisher
+- `GET /api/bot/config-by-domain` - Auto-detect publisher config by domain (NEW!)
+- `GET /api/bot/config/:publisherId` - Get bot configuration for publisher (legacy)
 
 ### System Status
 - `GET /health` - API health check
@@ -304,6 +316,7 @@ curl -X DELETE http://localhost:8080/api/admin/publishers/{publisherId}
 
 ## Current Status
 - ✅ Portfolio Website (Port 3000)
+- ✅ MyNewOne Publisher Website (Port 3001) - NEW!
 - ✅ COAD Platform Frontend (Port 4000)
 - ✅ COAD API Backend (Port 8080)
 - ✅ AdSDK Server (Port 4001)
@@ -316,6 +329,7 @@ curl -X DELETE http://localhost:8080/api/admin/publishers/{publisherId}
 - ✅ Real-time Ad Serving
 - ✅ Database-driven Publisher Management
 - ✅ Admin Interface for Database Management
+- ✅ Zero-Configuration AdSDK with Auto-Detection - NEW!
 
 ## Admin Dashboard Usage
 

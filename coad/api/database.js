@@ -241,6 +241,26 @@ class Database {
     })
   }
 
+  async deleteAdPlacement(publisherId, selector) {
+    return new Promise((resolve, reject) => {
+      this.db.run(`
+        DELETE FROM ad_placements
+        WHERE id IN (
+          SELECT ap.id FROM ad_placements ap
+          JOIN websites w ON ap.website_id = w.id
+          WHERE w.publisher_id = ? AND ap.selector = ?
+        )
+      `, [publisherId, selector],
+      function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve({ changes: this.changes })
+        }
+      })
+    })
+  }
+
   // Ad placement operations
   async addAdPlacement(websiteId, placementData) {
     return new Promise((resolve, reject) => {

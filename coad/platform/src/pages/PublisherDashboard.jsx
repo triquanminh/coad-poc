@@ -1,7 +1,259 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import './PublisherDashboard.css'
+
+// SDK Health Check Component
+function SDKHealthCheck({ website, onHealthUpdate }) {
+  const [isChecking, setIsChecking] = useState(false)
+  const [healthStatus, setHealthStatus] = useState(null)
+  const [lastChecked, setLastChecked] = useState(null)
+
+  const checkSDKHealth = async () => {
+    setIsChecking(true)
+    try {
+      // Check if the website has the SDK installed by looking for COAD config
+      const response = await axios.post('http://localhost:8080/api/health-check', {
+        url: website.url,
+        checkSDK: true
+      })
+
+      // Additional check: try to fetch the website and look for COAD script
+      // Note: CORS will prevent direct content checking, but we can check response status
+
+      const healthData = {
+        sdkInstalled: response.data.sdkDetected || false,
+        websiteAccessible: response.data.status === 'healthy',
+        responseTime: response.data.responseTime,
+        lastChecked: new Date().toISOString()
+      }
+
+      setHealthStatus(healthData)
+      setLastChecked(new Date())
+      onHealthUpdate && onHealthUpdate(website.publisherId, healthData)
+
+    } catch (error) {
+      console.error('SDK health check failed:', error)
+      setHealthStatus({
+        sdkInstalled: false,
+        websiteAccessible: false,
+        error: error.message,
+        lastChecked: new Date().toISOString()
+      })
+    }
+    setIsChecking(false)
+  }
+
+  useEffect(() => {
+    // Auto-check on mount
+    checkSDKHealth()
+  }, [website.url])
+
+  const getStatusIcon = () => {
+    if (isChecking) return '🔄'
+    if (!healthStatus) return '❓'
+    if (healthStatus.sdkInstalled && healthStatus.websiteAccessible) return '✅'
+    if (healthStatus.websiteAccessible && !healthStatus.sdkInstalled) return '⚠️'
+    return '❌'
+  }
+
+  const getStatusText = () => {
+    if (isChecking) return 'Checking...'
+    if (!healthStatus) return 'Unknown'
+    if (healthStatus.sdkInstalled && healthStatus.websiteAccessible) return 'SDK Active'
+    if (healthStatus.websiteAccessible && !healthStatus.sdkInstalled) return 'SDK Missing'
+    if (!healthStatus.websiteAccessible) return 'Website Unreachable'
+    return 'Error'
+  }
+
+  return (
+    <div className="sdk-health-check">
+      <div className="health-status">
+        <span className="status-icon">{getStatusIcon()}</span>
+        <span className="status-text">{getStatusText()}</span>
+      </div>
+      <button
+        onClick={checkSDKHealth}
+        disabled={isChecking}
+        className="health-check-btn"
+        title="Check SDK Installation"
+      >
+        {isChecking ? '🔄' : '🔍'}
+      </button>
+      {lastChecked && (
+        <div className="last-checked">
+          Last checked: {lastChecked.toLocaleTimeString()}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Website Card Component
+function WebsiteCard({ website, onEdit, onDelete, onHealthUpdate }) {
+  const [placements, setPlacements] = useState([])
+  const [isLoadingPlacements, setIsLoadingPlacements] = useState(true)
+  const [showPlacements, setShowPlacements] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(false)
+
+  useEffect(() => {
+    loadPlacements()
+  }, [website.publisherId])
+
+  const loadPlacements = async () => {
+    try {
+      setIsLoadingPlacements(true)
+      const response = await axios.get(`http://localhost:8080/api/publisher/${website.publisherId}/placements`)
+      setPlacements(response.data)
+    } catch (error) {
+      console.error('Failed to load placements:', error)
+      setPlacements([])
+    } finally {
+      setIsLoadingPlacements(false)
+    }
+  }
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
+  const copyPublisherId = () => {
+    navigator.clipboard.writeText(website.publisherId)
+    alert('Publisher ID copied to clipboard!')
+  }
+
+  const copySDKCode = () => {
+    const sdkCode = `<script src="http://localhost:4001/adsdk.js" async></script>`
+
+    navigator.clipboard.writeText(sdkCode)
+    alert('SDK code copied to clipboard!')
+  }
+
+  return (
+    <div className="website-card">
+      <div className="website-header">
+        <div className="website-main-info">
+          <div className="website-title">
+            <a href={website.url} target="_blank" rel="noopener noreferrer" className="website-url">
+              {website.url}
+            </a>
+            <span className="website-title-text">{website.title || 'No title'}</span>
+          </div>
+          <div className="website-meta">
+            <span className="publisher-id" onClick={copyPublisherId} title="Click to copy">
+              📋 {website.publisherId}
+            </span>
+            <span className="created-date">
+              📅 {formatDate(website.createdAt)}
+            </span>
+          </div>
+        </div>
+
+        <div className="website-status">
+          <div className="status-badges">
+            <span className={`status-badge ${website.status}`}>
+              {website.status}
+            </span>
+            <span className={`health-badge ${website.healthStatus}`}>
+              {website.healthStatus}
+            </span>
+          </div>
+          <SDKHealthCheck website={website} onHealthUpdate={onHealthUpdate} />
+        </div>
+      </div>
+
+      <div className="website-stats">
+        <div className="stat-item">
+          <span className="stat-label">Ad Placements</span>
+          <span className="stat-value">{placements.length}</span>
+        </div>
+        <div className="stat-item">
+          <span className="stat-label">Response Time</span>
+          <span className="stat-value">{website.responseTime || 0}ms</span>
+        </div>
+        <div className="stat-item">
+          <span className="stat-label">DOM Elements</span>
+          <span className="stat-value">{website.domElements || 0}</span>
+        </div>
+      </div>
+
+      <div className="website-actions">
+        <button
+          onClick={() => setShowPlacements(!showPlacements)}
+          className="btn btn-secondary"
+          disabled={isLoadingPlacements}
+        >
+          {showPlacements ? '📋 Hide Placements' : '📋 Show Placements'} ({placements.length})
+        </button>
+        <button onClick={copySDKCode} className="btn btn-primary">
+          📄 Copy SDK Code
+        </button>
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="btn btn-secondary"
+        >
+          {isExpanded ? '📤 Collapse' : '📥 Expand'}
+        </button>
+      </div>
+
+      {showPlacements && (
+        <div className="placements-section">
+          <h4>Ad Placements ({placements.length})</h4>
+          {isLoadingPlacements ? (
+            <div className="loading">Loading placements...</div>
+          ) : placements.length > 0 ? (
+            <div className="placements-list">
+              {placements.map((placement) => (
+                <div key={placement.id} className="placement-item">
+                  <code className="placement-selector">{placement.selector}</code>
+                  <span className="placement-description">{placement.description}</span>
+                  <span className={`placement-priority priority-${placement.priority}`}>
+                    {placement.priority}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="no-placements">
+              No ad placements configured yet.
+              <Link to="/publisher/placements" className="add-placements-link">
+                Add placements →
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
+
+      {isExpanded && (
+        <div className="website-details">
+          <div className="detail-section">
+            <h4>Website Information</h4>
+            <div className="detail-grid">
+              <div className="detail-item">
+                <span className="detail-label">Description:</span>
+                <span className="detail-value">{website.description || 'No description'}</span>
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">Website ID:</span>
+                <span className="detail-value">{website.websiteId}</span>
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">Last Updated:</span>
+                <span className="detail-value">{formatDate(website.updatedAt)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 // Sub-components for different publisher sections
 function WebsiteRegistration({ onWebsiteAdded, onNavigateToNext }) {
@@ -317,6 +569,521 @@ function AdPlacementSelector({ website, selectedPlacements, setSelectedPlacement
   )
 }
 
+// Combined Website Management Component
+function WebsiteManagement({ onWebsiteAdded, onNavigateToNext, selectedPlacements, setSelectedPlacements }) {
+  const [websites, setWebsites] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [selectedWebsite, setSelectedWebsite] = useState(null)
+  const [showRegistration, setShowRegistration] = useState(false)
+  const websitesListRef = useRef(null)
+
+  // Website Registration State
+  const [websiteUrl, setWebsiteUrl] = useState('')
+  const [isChecking, setIsChecking] = useState(false)
+  const [healthCheckResult, setHealthCheckResult] = useState(null)
+  const [isRegistering, setIsRegistering] = useState(false)
+  const [registrationError, setRegistrationError] = useState('')
+
+  useEffect(() => {
+    loadWebsites()
+  }, [])
+
+  useEffect(() => {
+    checkScrollable()
+  }, [websites])
+
+  const checkScrollable = () => {
+    if (websitesListRef.current) {
+      const container = websitesListRef.current
+      const isScrollable = container.scrollHeight > container.clientHeight
+
+      if (isScrollable) {
+        container.parentElement.classList.add('has-scroll')
+      } else {
+        container.parentElement.classList.remove('has-scroll')
+      }
+    }
+  }
+
+  const loadWebsites = async () => {
+    try {
+      setIsLoading(true)
+      const response = await axios.get('http://localhost:8080/api/publishers')
+      setWebsites(response.data)
+    } catch (err) {
+      console.error('Failed to load websites:', err)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleWebsiteSelect = (website) => {
+    setSelectedWebsite(website)
+    setShowRegistration(false)
+  }
+
+  const handleShowRegistration = () => {
+    setShowRegistration(true)
+    setSelectedWebsite(null)
+    setHealthCheckResult(null)
+    setWebsiteUrl('')
+    setRegistrationError('')
+  }
+
+  const handleDeleteWebsite = async (website) => {
+    try {
+      const publisherId = website.publisherId || website.publisher_id
+      if (!publisherId) {
+        alert('Error: No publisher ID found')
+        return
+      }
+
+      // Delete from API
+      await axios.delete(`http://localhost:8080/api/publisher/${publisherId}`)
+
+      // Update local state
+      const updatedWebsites = websites.filter(w => w.publisherId !== publisherId)
+      setWebsites(updatedWebsites)
+
+      // Clear selection if deleted website was selected
+      if (selectedWebsite?.publisherId === publisherId) {
+        setSelectedWebsite(null)
+      }
+
+      alert('Website deleted successfully!')
+    } catch (err) {
+      console.error('Failed to delete website:', err)
+      alert(`Failed to delete website: ${err.response?.data?.error || err.message}`)
+    }
+  }
+
+  // Website Registration Functions
+  const handleHealthCheck = async () => {
+    if (!websiteUrl.trim()) {
+      alert('Please enter a website URL')
+      return
+    }
+
+    try {
+      setIsChecking(true)
+      setRegistrationError('')
+
+      const response = await axios.post('http://localhost:8080/api/health-check', {
+        url: websiteUrl.trim()
+      })
+
+      setHealthCheckResult(response.data)
+    } catch (error) {
+      console.error('Health check failed:', error)
+      setRegistrationError('Health check failed. Please check the URL and try again.')
+    } finally {
+      setIsChecking(false)
+    }
+  }
+
+  const handleRegisterWebsite = async () => {
+    if (!healthCheckResult) {
+      alert('Please run a health check first')
+      return
+    }
+
+    try {
+      setIsRegistering(true)
+      setRegistrationError('')
+
+      const response = await axios.post('http://localhost:8080/api/publisher/register', {
+        url: websiteUrl.trim(),
+        healthCheckData: healthCheckResult
+      })
+
+      const newWebsite = response.data
+      setWebsites(prev => [...prev, newWebsite])
+
+      if (onWebsiteAdded) {
+        onWebsiteAdded(newWebsite)
+      }
+
+      // Reset form
+      setWebsiteUrl('')
+      setHealthCheckResult(null)
+      setShowRegistration(false)
+
+      // Select the newly registered website
+      setSelectedWebsite(newWebsite)
+
+    } catch (error) {
+      console.error('Registration failed:', error)
+      if (error.response?.data?.error) {
+        setRegistrationError(error.response.data.error)
+      } else {
+        setRegistrationError('Registration failed. Please try again.')
+      }
+    } finally {
+      setIsRegistering(false)
+    }
+  }
+
+  return (
+    <div className="website-management">
+      <h2>Manage Websites & Ad Placements</h2>
+      <p>Select a website to manage its ad placements</p>
+
+      <div className="management-layout">
+        {/* Left Column - Websites */}
+        <div className="websites-column">
+          <div className="column-header">
+            <h3>Your Websites</h3>
+            <button
+              onClick={handleShowRegistration}
+              className="btn btn-primary btn-sm"
+            >
+              ➕ Add Website
+            </button>
+          </div>
+
+          <div className="websites-list">
+            {isLoading ? (
+              <div className="loading-indicator">Loading...</div>
+            ) : websites.length === 0 ? (
+              <div className="empty-state">
+                <p>No websites registered yet.</p>
+              </div>
+            ) : (
+              <div className="websites-items" ref={websitesListRef}>
+                {websites.map((website) => (
+                  <WebsiteListItem
+                    key={website.publisherId}
+                    website={website}
+                    isSelected={selectedWebsite?.publisherId === website.publisherId}
+                    onSelect={() => handleWebsiteSelect(website)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right Column - Ad Placements */}
+        <div className="placements-column">
+          {selectedWebsite ? (
+            <AdPlacementManager
+              website={selectedWebsite}
+              selectedPlacements={selectedPlacements}
+              setSelectedPlacements={setSelectedPlacements}
+              onDeleteWebsite={handleDeleteWebsite}
+            />
+          ) : (
+            <div className="no-selection">
+              <div className="no-selection-content">
+                <div className="no-selection-icon">📍</div>
+                <h3>Select a Website</h3>
+                <p>Choose a website from the left to manage its ad placements</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Registration Dialog/Modal */}
+      {showRegistration && (
+        <div className="modal-overlay" onClick={() => setShowRegistration(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Register New Website</h3>
+              <button
+                className="modal-close"
+                onClick={() => setShowRegistration(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <div className="registration-form">
+                <div className="form-group">
+                  <label htmlFor="website-url">Website URL</label>
+                  <input
+                    id="website-url"
+                    type="url"
+                    value={websiteUrl}
+                    onChange={(e) => setWebsiteUrl(e.target.value)}
+                    placeholder="https://example.com"
+                    className="url-input"
+                    disabled={isChecking || isRegistering}
+                  />
+                </div>
+
+                <button
+                  onClick={handleHealthCheck}
+                  disabled={isChecking || isRegistering || !websiteUrl.trim()}
+                  className="btn btn-secondary"
+                >
+                  {isChecking ? 'Checking...' : '🔍 Check Website Health'}
+                </button>
+
+                {registrationError && (
+                  <div className="error-message">{registrationError}</div>
+                )}
+
+                {healthCheckResult && (
+                  <div className="health-check-result">
+                    <h4>Health Check Results</h4>
+                    <div className="result-grid">
+                      <div className="result-item">
+                        <span className="label">Status:</span>
+                        <span className={`status ${healthCheckResult.status}`}>
+                          {healthCheckResult.status}
+                        </span>
+                      </div>
+                      <div className="result-item">
+                        <span className="label">Response Time:</span>
+                        <span>{healthCheckResult.responseTime}ms</span>
+                      </div>
+                      <div className="result-item">
+                        <span className="label">Page Title:</span>
+                        <span>{healthCheckResult.pageTitle || 'No title'}</span>
+                      </div>
+                      <div className="result-item">
+                        <span className="label">DOM Elements:</span>
+                        <span>{healthCheckResult.domElements}</span>
+                      </div>
+                    </div>
+
+                    {healthCheckResult.suggestions && healthCheckResult.suggestions.length > 0 && (
+                      <div className="placement-suggestions">
+                        <h4>Suggested Ad Placements</h4>
+                        <div className="suggestions-list">
+                          {healthCheckResult.suggestions.map((suggestion, index) => (
+                            <div key={index} className="suggestion-item">
+                              <span className="selector">{suggestion.selector}</span>
+                              <span className="description">{suggestion.description}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="registration-section">
+                      <h4>Ready to Register</h4>
+                      <p>Website health check passed. Click below to register this website.</p>
+                      <button
+                        onClick={handleRegisterWebsite}
+                        disabled={isRegistering}
+                        className="btn btn-primary"
+                      >
+                        {isRegistering ? 'Registering...' : '✅ Register Website'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Website List Item Component
+function WebsiteListItem({ website, isSelected, onSelect }) {
+  return (
+    <div className={`website-list-item ${isSelected ? 'selected' : ''}`} onClick={onSelect}>
+      <div className="website-info">
+        <div className="website-url-title">
+          <span className="website-url">{website.url}</span>
+          <span className="website-title">{website.title || 'No title'}</span>
+        </div>
+        <div className="website-meta">
+          <span className="placement-count">{website.placementCount || 0} placements</span>
+          <span className="created-date">{new Date(website.createdAt).toLocaleDateString()}</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Ad Placement Manager Component
+function AdPlacementManager({ website, selectedPlacements, setSelectedPlacements, onDeleteWebsite }) {
+  const [customSelector, setCustomSelector] = useState('')
+  const [placements, setPlacements] = useState([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    loadPlacements()
+  }, [website.publisherId])
+
+  const loadPlacements = async () => {
+    try {
+      setIsLoading(true)
+      const publisherId = website.publisherId || website.publisher_id
+      if (!publisherId) {
+        throw new Error('No publisher ID found in website object')
+      }
+
+      const response = await axios.get(`http://localhost:8080/api/publisher/${publisherId}/placements`)
+      setPlacements(response.data)
+      setSelectedPlacements(response.data)
+    } catch (err) {
+      console.error('Failed to load placements:', err)
+      setError('Failed to load existing placements')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleDeleteWebsite = () => {
+    if (window.confirm(`Are you sure you want to delete "${website.url}"?\n\nThis will remove the website and all its ad placements permanently.`)) {
+      onDeleteWebsite(website)
+    }
+  }
+
+  const handleAddSelector = () => {
+    if (!customSelector.trim()) return
+
+    // Check if selector already exists
+    if (placements.some(p => p.selector === customSelector.trim())) {
+      alert('This selector already exists!')
+      return
+    }
+
+    const newPlacement = {
+      selector: customSelector.trim(),
+      description: `Ad placement for ${customSelector.trim()}`,
+      priority: 'medium'
+    }
+
+    const updatedPlacements = [...placements, newPlacement]
+    setPlacements(updatedPlacements)
+    setSelectedPlacements(updatedPlacements)
+    setCustomSelector('')
+
+    // Save immediately
+    savePlacement(newPlacement)
+  }
+
+  const savePlacement = async (placement) => {
+    try {
+      const publisherId = website.publisherId || website.publisher_id
+      if (!publisherId) {
+        throw new Error('No publisher ID found in website object')
+      }
+
+      await axios.post(`http://localhost:8080/api/publisher/${publisherId}/placements`, {
+        selector: placement.selector,
+        description: placement.description,
+        priority: placement.priority
+      })
+    } catch (err) {
+      console.error('Failed to save placement:', err)
+      setError('Failed to save placement')
+    }
+  }
+
+  const removePlacement = async (selector) => {
+    try {
+      // Get the correct publisher ID from the website object
+      const publisherId = website.publisherId || website.publisher_id
+      console.log('Removing placement:', { selector, publisherId, website })
+
+      if (!publisherId) {
+        throw new Error('No publisher ID found in website object')
+      }
+
+      // Remove from API
+      await axios.delete(`http://localhost:8080/api/publisher/${publisherId}/placements/${encodeURIComponent(selector)}`)
+
+      // Update local state
+      const updatedPlacements = placements.filter(p => p.selector !== selector)
+      setPlacements(updatedPlacements)
+      setSelectedPlacements(updatedPlacements)
+    } catch (err) {
+      console.error('Failed to remove placement:', err)
+      console.error('Error details:', err.response?.data || err.message)
+      setError(`Failed to remove placement: ${err.response?.data?.error || err.message}`)
+    }
+  }
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      handleAddSelector()
+    }
+  }
+
+  return (
+    <div className="ad-placement-manager">
+      <div className="manager-header">
+        <div className="header-content">
+          <h3>Ad Placements</h3>
+          <p>Manage ad placements for <strong>{website.url}</strong></p>
+        </div>
+        <div className="header-actions">
+          <button
+            onClick={handleDeleteWebsite}
+            className="btn btn-danger btn-sm"
+          >
+            🗑️ Delete Website
+          </button>
+        </div>
+      </div>
+
+      {error && <div className="error-message">{error}</div>}
+
+      <div className="add-selector-section">
+        <h4>Add New Placement</h4>
+        <div className="add-selector-form">
+          <input
+            type="text"
+            value={customSelector}
+            onChange={(e) => setCustomSelector(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Enter CSS selector (e.g., .header, #sidebar, .content)"
+            className="selector-input"
+          />
+          <button
+            onClick={handleAddSelector}
+            disabled={!customSelector.trim()}
+            className="btn btn-primary"
+          >
+            ➕ Add Selector
+          </button>
+        </div>
+      </div>
+
+      <div className="placements-list-section">
+        <h4>Current Placements ({placements.length})</h4>
+        {isLoading ? (
+          <div className="loading-indicator">Loading placements...</div>
+        ) : placements.length === 0 ? (
+          <div className="empty-placements">
+            <p>No ad placements configured yet.</p>
+            <p>Add CSS selectors above to specify where ads should appear on your website.</p>
+          </div>
+        ) : (
+          <div className="placements-list">
+            {placements.map((placement, index) => (
+              <div key={index} className="placement-item">
+                <div className="placement-info">
+                  <code className="placement-selector">{placement.selector}</code>
+                  <span className="placement-description">{placement.description}</span>
+                </div>
+                <button
+                  onClick={() => removePlacement(placement.selector)}
+                  className="remove-btn"
+                  title="Remove placement"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function SDKIntegration({ website }) {
   const [publisherData, setPublisherData] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -350,17 +1117,7 @@ function SDKIntegration({ website }) {
     }
   }
 
-  const sdkScript = publisherData ? `<!-- COAD AdSDK Integration -->
-  <script>
-    window.COADConfig = {
-      publisherId: '${publisherData.publisherId}',
-      debug: false // Set to true for development
-    };
-  </script>
-  <script src="http://localhost:4001/adsdk.js" async></script>
-<!-- COAD AdSDK Integration -->
-`
-: '// Loading...'
+  const sdkScript = `<script src="http://localhost:4001/adsdk.js" async></script>`
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(sdkScript)
@@ -402,27 +1159,6 @@ function SDKIntegration({ website }) {
       <h2>AdSDK Integration</h2>
       <p>Add the following script to your website's HTML head section:</p>
 
-      <div className="integration-info">
-        <div className="info-item">
-          <span className="label">Publisher ID:</span>
-          <code className="publisher-id">{publisherData.publisherId}</code>
-        </div>
-        <div className="info-item">
-          <span className="label">Website:</span>
-          <span>{publisherData.url}</span>
-        </div>
-        <div className="info-item">
-          <span className="label">Ad Placements:</span>
-          <span>{publisherData.placementDetails?.length || 0} locations</span>
-        </div>
-        <div className="info-item">
-          <span className="label">Status:</span>
-          <span className={`status ${publisherData.healthStatus}`}>
-            {publisherData.healthStatus || 'Unknown'}
-          </span>
-        </div>
-      </div>
-
       <div className="sdk-code">
         <div className="code-header">
           <span>Integration Code</span>
@@ -438,22 +1174,160 @@ function SDKIntegration({ website }) {
       <div className="integration-steps">
         <h3>Integration Steps</h3>
         <ol>
-          <li>Copy the code above</li>
+          <li>Copy the simple script tag above</li>
           <li>Paste it in your website's HTML head section</li>
           <li>Deploy your website</li>
-          <li>Ads will automatically appear in your selected locations</li>
-          <li><strong>Add new placements anytime</strong> - no code updates needed!</li>
+          <li>The SDK will automatically detect your domain and load your ad configuration</li>
         </ol>
       </div>
+    </div>
+  )
+}
 
-      <div className="sdk-info">
-        <h3>AdSDK Features</h3>
-        <p><strong>🔄 Dynamic Configuration:</strong> Automatically fetches latest ad placements from API</p>
-        <p><strong>📱 Responsive:</strong> Works on all devices and screen sizes</p>
-        <p><strong>⚡ Fast Loading:</strong> Asynchronous, non-blocking (~15KB gzipped)</p>
-        <p><strong>🎯 Smart Placement:</strong> Automatically finds and fills your selected elements</p>
-        <p><strong>🔧 No Maintenance:</strong> Add/remove placements without updating code</p>
+// Simple Website Card Component
+function SimpleWebsiteCard({ website }) {
+  const copyPublisherId = () => {
+    navigator.clipboard.writeText(website.publisherId)
+    alert('Publisher ID copied to clipboard!')
+  }
+
+  return (
+    <div className="website-card">
+      <div className="website-header">
+        <div className="website-main-info">
+          <div className="website-title">
+            <a href={website.url} target="_blank" rel="noopener noreferrer" className="website-url">
+              {website.url}
+            </a>
+            <span className="website-title-text">{website.title || 'No title'}</span>
+          </div>
+          <div className="website-meta">
+            <span
+              className="publisher-id"
+              onClick={copyPublisherId}
+              title="Click to copy Publisher ID"
+            >
+              ID: {website.publisherId}
+            </span>
+            <span>Created: {new Date(website.createdAt).toLocaleDateString()}</span>
+            <span>{website.placementCount || 0} placements</span>
+          </div>
+        </div>
       </div>
+    </div>
+  )
+}
+
+// Websites Overview Component
+function WebsitesOverview() {
+  const [websites, setWebsites] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    loadWebsites()
+  }, [])
+
+  const loadWebsites = async () => {
+    try {
+      setIsLoading(true)
+      const response = await axios.get('http://localhost:8080/api/publishers')
+      setWebsites(response.data)
+      setError('')
+    } catch (err) {
+      console.error('Failed to load websites:', err)
+      setError('Failed to load your websites')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleRefresh = () => {
+    loadWebsites()
+  }
+
+  if (isLoading) {
+    return (
+      <div className="dashboard-overview">
+        <h2>Your Registered Websites</h2>
+        <div className="loading-state">
+          <div className="loading-spinner">🔄</div>
+          <p>Loading your websites...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="dashboard-overview">
+        <h2>Your Registered Websites</h2>
+        <div className="error-state">
+          <div className="error-icon">❌</div>
+          <p>{error}</p>
+          <button onClick={handleRefresh} className="btn btn-primary">
+            Try Again
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="dashboard-overview">
+      <div className="overview-header">
+        <div className="header-content">
+          <h2>Your Registered Websites</h2>
+          <p>Manage your websites and ad placements</p>
+        </div>
+        <div className="header-actions">
+          <button onClick={handleRefresh} className="btn btn-secondary">
+            🔄 Refresh
+          </button>
+          <Link to="/publisher/manage" className="btn btn-primary">
+            ➕ Add Website
+          </Link>
+        </div>
+      </div>
+
+      <div className="websites-stats">
+        <div className="stat-card">
+          <div className="stat-icon">🌐</div>
+          <div className="stat-content">
+            <div className="stat-number">{websites.length}</div>
+            <div className="stat-label">Total Websites</div>
+          </div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-icon">📍</div>
+          <div className="stat-content">
+            <div className="stat-number">
+              {websites.reduce((total, site) => total + (site.placementCount || 0), 0)}
+            </div>
+            <div className="stat-label">Ad Placements</div>
+          </div>
+        </div>
+      </div>
+
+      {websites.length === 0 ? (
+        <div className="empty-state">
+          <div className="empty-icon">🌐</div>
+          <h3>No websites registered yet</h3>
+          <p>Get started by registering your first website to begin monetizing with ads.</p>
+          <Link to="/publisher/manage" className="btn btn-primary">
+            Register Your First Website
+          </Link>
+        </div>
+      ) : (
+        <div className="websites-grid">
+          {websites.map((website) => (
+            <SimpleWebsiteCard
+              key={website.publisherId}
+              website={website}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -507,25 +1381,24 @@ function PublisherDashboard() {
         </div>
 
         <div className="dashboard-nav">
-          <Link 
-            to="/publisher" 
+          <Link
+            to="/publisher"
             className={`nav-tab ${location.pathname === '/publisher' ? 'active' : ''}`}
           >
-            Website Registration
+            📊 Dashboard
           </Link>
-          <Link 
-            to="/publisher/placements" 
-            className={`nav-tab ${location.pathname === '/publisher/placements' ? 'active' : ''}`}
-            style={{ opacity: registeredWebsite ? 1 : 0.5, pointerEvents: registeredWebsite ? 'auto' : 'none' }}
+          <Link
+            to="/publisher/manage"
+            className={`nav-tab ${location.pathname === '/publisher/manage' ? 'active' : ''}`}
           >
-            Ad Placements
+            🌐 Manage Websites
           </Link>
-          <Link 
-            to="/publisher/integration" 
+          <Link
+            to="/publisher/integration"
             className={`nav-tab ${location.pathname === '/publisher/integration' ? 'active' : ''}`}
             style={{ opacity: registeredWebsite ? 1 : 0.5, pointerEvents: registeredWebsite ? 'auto' : 'none' }}
           >
-            SDK Integration
+            🔧 SDK Integration
           </Link>
         </div>
 
@@ -533,15 +1406,13 @@ function PublisherDashboard() {
           <Routes>
             <Route
               index
-              element={<WebsiteRegistration
-                onWebsiteAdded={handleWebsiteAdded}
-                onNavigateToNext={handleNavigateToNext}
-              />}
+              element={<WebsitesOverview />}
             />
             <Route
-              path="placements"
-              element={<AdPlacementSelector
-                website={registeredWebsite}
+              path="manage"
+              element={<WebsiteManagement
+                onWebsiteAdded={handleWebsiteAdded}
+                onNavigateToNext={handleNavigateToNext}
                 selectedPlacements={selectedPlacements}
                 setSelectedPlacements={setSelectedPlacements}
               />}

@@ -1,0 +1,17 @@
+{
+  "name": "mynewone-publisher",
+  "version": "1.0.0",
+  "description": "MyNewOne Publisher Website with Landing Page and Policy Site",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "path": "^0.12.7"
+  },
+  "keywords": ["publisher", "coad", "website"],
+  "author": "COAD Publisher",
+  "license": "MIT"
+}

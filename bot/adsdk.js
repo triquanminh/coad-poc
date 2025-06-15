@@ -9,7 +9,7 @@
   // SDK Configuration
   const SDK_VERSION = '1.0.0';
   const API_BASE_URL = 'http://localhost:8080/api';
-  const DEFAULT_REFRESH_INTERVAL = 30000; // 30 seconds
+  const DEFAULT_REFRESH_INTERVAL = 10000; // 10 seconds
 
   // Global COAD namespace
   window.COAD = window.COAD || {};
@@ -22,7 +22,7 @@
         placements: config.placements || [],
         apiUrl: config.apiUrl || API_BASE_URL,
         refreshInterval: config.refreshInterval || DEFAULT_REFRESH_INTERVAL,
-        debug: config.debug || false,
+        debug: config.debug || true,
         ...config
       };
 
@@ -43,16 +43,23 @@
       try {
         this.log('Initializing COAD AdSDK...');
 
-        // Validate configuration
-        if (!this.config.publisherId) {
-          throw new Error('Publisher ID is required');
-        }
-
-        // Check API connectivity
+        // Check API connectivity first
         await this.checkAPIConnectivity();
 
-        // Load publisher configuration from API
-        await this.loadPublisherConfig();
+        // Auto-detect publisher configuration if no publisherId provided
+        if (!this.config.publisherId) {
+          this.log('No Publisher ID provided, attempting auto-detection...');
+          await this.autoDetectPublisherConfig();
+        } else {
+          this.log('Using provided Publisher ID:', this.config.publisherId);
+          // Load publisher configuration from API using provided ID
+          await this.loadPublisherConfig();
+        }
+
+        // Validate that we have a publisher ID after detection/loading
+        if (!this.config.publisherId) {
+          throw new Error('Unable to determine Publisher ID. Please register this website in the COAD publisher dashboard.');
+        }
 
         // Create ad containers for specified placements with retry logic
         await this.createAdContainersWithRetry();
@@ -95,6 +102,43 @@
       } catch (error) {
         this.error('❌ API connectivity check failed:', error);
         throw new Error(`Cannot connect to COAD API at ${this.config.apiUrl}`);
+      }
+    }
+
+    // Auto-detect publisher configuration by domain
+    async autoDetectPublisherConfig() {
+      try {
+        this.log('Auto-detecting publisher configuration...');
+        this.log('Current domain:', window.location.hostname);
+        this.log('Current URL:', window.location.origin);
+
+        // Try to get config by domain first
+        const params = new URLSearchParams({
+          domain: window.location.hostname,
+          url: window.location.origin
+        });
+
+        const response = await fetch(`${this.config.apiUrl}/bot/config-by-domain?${params}`);
+
+        if (!response.ok) {
+          if (response.status === 404) {
+            const errorData = await response.json();
+            throw new Error(`Website not registered: ${errorData.error}. ${errorData.suggestion || ''}`);
+          }
+          throw new Error(`Failed to auto-detect publisher config: ${response.status}`);
+        }
+
+        const config = await response.json();
+
+        // Merge API config with local config
+        this.config = { ...this.config, ...config };
+
+        this.log('✅ Publisher configuration auto-detected:', config);
+        this.log(`✅ Matched by: ${config.matchedBy}, Publisher ID: ${config.publisherId}`);
+
+      } catch (error) {
+        this.error('❌ Failed to auto-detect publisher configuration:', error);
+        throw error;
       }
     }
 
@@ -178,14 +222,17 @@
             adContainer.setAttribute('data-placement', placement);
             adContainer.setAttribute('data-publisher', this.config.publisherId);
 
-            // Insert the ad container
-            if (element.children.length > 0) {
-              // Insert after first child
-              element.insertBefore(adContainer, element.children[1] || null);
-            } else {
-              // Append to element
-              element.appendChild(adContainer);
-            }
+            // Insert the ad container AFTER the target element as a sibling
+            this.log(`Inserting ad container AFTER element:`, element);
+            this.log(`Target element tag:`, element.tagName);
+            this.log(`Target element class:`, element.className);
+            this.log(`Target element parent:`, element.parentElement);
+
+            element.insertAdjacentElement('afterend', adContainer);
+
+            this.log(`Ad container inserted. Container parent:`, adContainer.parentElement);
+            this.log(`Container next sibling:`, adContainer.nextElementSibling);
+            this.log(`Container previous sibling:`, adContainer.previousElementSibling);
 
             this.adContainers.set(containerId, {
               element: adContainer,
@@ -416,16 +463,23 @@
           text-align: center;
           min-height: 50px;
           position: relative;
+          z-index: 999999;
+          clear: both;
         }
 
         .coad-ad-wrapper {
-          display: block;
+          display: flex;
+          justify-content: center;
+          align-items: center;
           max-width: 100%;
           margin: 0 auto;
           border-radius: 8px;
           overflow: hidden;
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
           transition: transform 0.2s ease;
+          position: relative;
+          z-index: 999999;
+          background: white;
         }
 
         .coad-ad-wrapper:hover {
@@ -441,6 +495,8 @@
           border-radius: 8px;
           border: 2px dashed #ccc;
           animation: pulse 2s infinite;
+          position: relative;
+          z-index: 999999;
         }
 
         .coad-ad-error {
@@ -450,6 +506,8 @@
           background: #ffeaea;
           border: 1px solid #f5c6cb;
           border-radius: 6px;
+          position: relative;
+          z-index: 999999;
         }
 
         @keyframes pulse {
@@ -558,51 +616,59 @@
     }
   }
 
-  // Auto-initialize if configuration is available
-  if (window.COADConfig) {
-    const sdk = new COADAdSDK(window.COADConfig);
+  // Auto-initialize with or without configuration
+  const config = window.COADConfig || {};
+  const sdk = new COADAdSDK(config);
 
-    // Multiple initialization strategies for different scenarios
-    const initializeSDK = () => {
-      sdk.init().catch(error => {
-        console.error('[COAD SDK] Initialization failed:', error);
-        // Retry after delay
+  // Multiple initialization strategies for different scenarios
+  const initializeSDK = () => {
+    sdk.init().catch(error => {
+      console.error('[COAD SDK] Initialization failed:', error);
+      console.error('[COAD SDK] Error details:', error.message);
+
+      // If it's a registration error, show helpful message
+      if (error.message.includes('not registered')) {
+        console.warn('[COAD SDK] 💡 To fix this: Register your website at the COAD publisher dashboard');
+        console.warn('[COAD SDK] 💡 Current domain:', window.location.hostname);
+        console.warn('[COAD SDK] 💡 Current URL:', window.location.origin);
+      }
+
+      // Don't retry for registration errors
+      if (!error.message.includes('not registered')) {
         setTimeout(() => initializeSDK(), 2000);
-      });
-    };
-
-    // Strategy 1: DOM Content Loaded
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initializeSDK);
-    } else if (document.readyState === 'interactive') {
-      // Strategy 2: DOM is interactive but not fully loaded
-      setTimeout(initializeSDK, 500);
-    } else {
-      // Strategy 3: DOM is fully loaded
-      initializeSDK();
-    }
-
-    // Strategy 4: Window load event (fallback for React apps)
-    window.addEventListener('load', () => {
-      if (!sdk.isInitialized) {
-        console.log('[COAD SDK] Fallback initialization on window load');
-        initializeSDK();
       }
     });
+  };
 
-    // Strategy 5: Delayed initialization for React apps
-    setTimeout(() => {
-      if (!sdk.isInitialized) {
-        console.log('[COAD SDK] Delayed initialization for React apps');
-        initializeSDK();
-      }
-    }, 1000);
-
-    // Expose SDK instance globally
-    window.COAD.sdk = sdk;
+  // Strategy 1: DOM Content Loaded
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeSDK);
+  } else if (document.readyState === 'interactive') {
+    // Strategy 2: DOM is interactive but not fully loaded
+    setTimeout(initializeSDK, 500);
   } else {
-    console.warn('[COAD SDK] No configuration found. Please define window.COADConfig before loading the SDK.');
+    // Strategy 3: DOM is fully loaded
+    initializeSDK();
   }
+
+  // Strategy 4: Window load event (fallback for React apps)
+  window.addEventListener('load', () => {
+    if (!sdk.isInitialized) {
+      console.log('[COAD SDK] Fallback initialization on window load');
+      initializeSDK();
+    }
+  });
+
+  // Strategy 5: Delayed initialization for React apps
+  setTimeout(() => {
+    if (!sdk.isInitialized) {
+      console.log('[COAD SDK] Delayed initialization for React apps');
+      initializeSDK();
+    }
+  }, 1000);
+
+  // Expose SDK instance globally
+  window.COAD.sdk = sdk;
 
   // Expose SDK class for manual initialization
   window.COAD.AdSDK = COADAdSDK;
