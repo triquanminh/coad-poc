@@ -22,7 +22,7 @@
         placements: config.placements || [],
         apiUrl: config.apiUrl || API_BASE_URL,
         refreshInterval: config.refreshInterval || DEFAULT_REFRESH_INTERVAL,
-        debug: config.debug || true,
+        debug: false, // Debug mode disabled
         ...config
       };
 
@@ -223,16 +223,7 @@
             adContainer.setAttribute('data-publisher', this.config.publisherId);
 
             // Insert the ad container AFTER the target element as a sibling
-            this.log(`Inserting ad container AFTER element:`, element);
-            this.log(`Target element tag:`, element.tagName);
-            this.log(`Target element class:`, element.className);
-            this.log(`Target element parent:`, element.parentElement);
-
             element.insertAdjacentElement('afterend', adContainer);
-
-            this.log(`Ad container inserted. Container parent:`, adContainer.parentElement);
-            this.log(`Container next sibling:`, adContainer.nextElementSibling);
-            this.log(`Container previous sibling:`, adContainer.previousElementSibling);
 
             this.adContainers.set(containerId, {
               element: adContainer,
@@ -459,12 +450,15 @@
     injectStyles() {
       const styles = `
         .coad-ad-container {
-          margin: 20px 0;
+          margin: 0;
           text-align: center;
           min-height: 50px;
           position: relative;
           z-index: 999999;
           clear: both;
+          display: flex;
+          justify-content: center;
+          align-items: center;
         }
 
         .coad-ad-wrapper {
@@ -480,6 +474,11 @@
           position: relative;
           z-index: 999999;
           background: white;
+        }
+
+        .coad-ad-wrapper iframe {
+          display: block;
+          margin: 0 auto;
         }
 
         .coad-ad-wrapper:hover {
@@ -522,35 +521,14 @@
           }
         }
 
-        /* Debug mode styles */
-        .coad-debug .coad-ad-container {
-          border: 2px dashed #2563eb;
-          background: rgba(37, 99, 235, 0.05);
-        }
 
-        .coad-debug .coad-ad-container::before {
-          content: 'COAD Ad Container: ' attr(data-placement);
-          position: absolute;
-          top: -20px;
-          left: 0;
-          font-size: 10px;
-          color: #2563eb;
-          background: white;
-          padding: 2px 6px;
-          border-radius: 3px;
-          border: 1px solid #2563eb;
-        }
       `;
 
       const styleSheet = document.createElement('style');
       styleSheet.textContent = styles;
       document.head.appendChild(styleSheet);
 
-      // Add debug class to body if debug mode is enabled
-      if (this.config.debug) {
-        document.body.classList.add('coad-debug');
-        this.log('Debug mode enabled - ad containers will be highlighted');
-      }
+
     }
 
     // Dispatch custom events
@@ -654,7 +632,6 @@
   // Strategy 4: Window load event (fallback for React apps)
   window.addEventListener('load', () => {
     if (!sdk.isInitialized) {
-      console.log('[COAD SDK] Fallback initialization on window load');
       initializeSDK();
     }
   });
@@ -662,7 +639,6 @@
   // Strategy 5: Delayed initialization for React apps
   setTimeout(() => {
     if (!sdk.isInitialized) {
-      console.log('[COAD SDK] Delayed initialization for React apps');
       initializeSDK();
     }
   }, 1000);

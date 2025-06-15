@@ -35,7 +35,7 @@ app.get('/config/:publisherId', (req, res) => {
     publisherId,
     version: '1.0.0',
     apiUrl: 'http://localhost:8080/api',
-    refreshInterval: 30000,
+    refreshInterval: 10000,
     enabled: true
   })
 })

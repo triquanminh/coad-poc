@@ -475,7 +475,7 @@ app.get('/api/bot/config-by-domain', async (req, res) => {
       placements: placements.map(p => p.selector),
       placementDetails: placements,
       adServerUrl: 'http://localhost:8080/api/ads',
-      refreshInterval: 30000, // 30 seconds
+      refreshInterval: 10000, // 10 seconds
       enabled: website.status === 'active',
       autoDetected: true,
       matchedBy: url ? 'exact-url' : 'domain'
@@ -647,13 +647,117 @@ app.get('/api/ads', async (req, res) => {
             transform: scale(1.02);
             transition: transform 0.2s ease;
           }
+          .ad-info-icon {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 22px;
+            height: 22px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: Arial, sans-serif;
+            font-size: 13px;
+            font-weight: bold;
+            color: #333;
+            cursor: pointer;
+            z-index: 9999;
+            transition: all 0.2s ease;
+            border: 2px solid rgba(0,0,0,0.2);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+          }
+          .ad-info-icon:hover {
+            background: white;
+            transform: scale(1.1);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.5);
+          }
+          .ad-info-popup {
+            position: absolute;
+            top: 30px;
+            right: 6px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+            font-family: Arial, sans-serif;
+            font-size: 11px;
+            color: #333;
+            z-index: 10000;
+            min-width: 150px;
+            display: none;
+          }
+          .ad-info-popup.show {
+            display: block;
+            animation: fadeIn 0.2s ease;
+          }
+          @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
+          .ad-info-text {
+            margin-bottom: 8px;
+            font-weight: 500;
+          }
+          .feedback-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 10px;
+            cursor: pointer;
+            width: 100%;
+            transition: background 0.2s ease;
+          }
+          .feedback-button:hover {
+            background: #0056b3;
+          }
         </style>
       </head>
-      <body onclick="window.open('${selectedAd.clickUrl}', '_blank')">
+      <body onclick="handleAdClick(event)">
         <div class="ad-container">
           <img src="${selectedAd.imageUrl}" alt="${selectedAd.title}" class="ad-image">
           <div class="ad-overlay">${selectedAd.title}</div>
+          <div class="ad-info-icon" onclick="toggleInfo(event)">i</div>
+          <div class="ad-info-popup" id="infoPopup">
+            <div class="ad-info-text">Advertisement by CoAd</div>
+            <button class="feedback-button" onclick="sendFeedback(event)">Send Feedback</button>
+          </div>
         </div>
+
+        <script>
+          function toggleInfo(event) {
+            event.stopPropagation();
+            const popup = document.getElementById('infoPopup');
+            popup.classList.toggle('show');
+          }
+
+          function sendFeedback(event) {
+            event.stopPropagation();
+            // Open feedback form in new window
+            window.open('mailto:feedback@coad.com?subject=Ad Feedback&body=Please provide your feedback about this advertisement:', '_blank');
+          }
+
+          function handleAdClick(event) {
+            // Don't open ad if clicking on info icon or popup
+            if (event.target.closest('.ad-info-icon') || event.target.closest('.ad-info-popup')) {
+              return;
+            }
+            window.open('${selectedAd.clickUrl}', '_blank');
+          }
+
+          // Close popup when clicking outside
+          document.addEventListener('click', function(event) {
+            const popup = document.getElementById('infoPopup');
+            const icon = document.querySelector('.ad-info-icon');
+            if (!icon.contains(event.target) && !popup.contains(event.target)) {
+              popup.classList.remove('show');
+            }
+          });
+        </script>
       </body>
       </html>
     `;
@@ -673,7 +777,7 @@ app.get('/api/ads', async (req, res) => {
         style="
           border: none;
           border-radius: 8px;
-          margin: 10px 0;
+          margin: 0;
           box-shadow: 0 4px 8px rgba(0,0,0,0.1);
           max-width: 100%;
           display: block;
