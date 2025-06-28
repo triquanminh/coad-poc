@@ -1,28 +1,30 @@
-/**
- * COAD AdSDK - Version 1.0.0
- * Advanced advertising SDK for publisher websites
- */
-
 (function() {
   'use strict';
 
-  // SDK Configuration
-  const SDK_VERSION = '1.0.0';
-  const API_BASE_URL = 'http://localhost:8080/api';
-  const DEFAULT_REFRESH_INTERVAL = 10000; // 10 seconds
+  const SDK_VERSION = '0.1';
+  const API_BASE_URL = 'http://localhost:8080/api'; // TODO: Update Ad Serving Engine API url
+  
+  const CONTAINER_CREATION_MAX_RETRIES = 5;
+  const CONTAINER_INITIAL_RETRY_DELAY = 1000;
+  const CONTAINER_MAX_RETRY_DELAY = 5000;
 
-  // Global COAD namespace
-  window.COAD = window.COAD || {};
+  const AD_REFRESH_INTERVAL = 10000; // TODO: Update ad refresh interval
+  const AD_REQUEST_TIMEOUT = 5000;
+  const AD_MAX_LOAD_RETRIES = 3;
+  const AD_INITIAL_RETRY_DELAY = 1000;
 
-  class COADAdSDK {
+  window.CoAd = window.CoAd || {};
+
+  class CoAdSDK {
     constructor(config) {
       this.config = {
         publisherId: config.publisherId || null,
         website: config.website || window.location.origin,
         placements: config.placements || [],
         apiUrl: config.apiUrl || API_BASE_URL,
-        refreshInterval: config.refreshInterval || DEFAULT_REFRESH_INTERVAL,
-        debug: false, // Debug mode disabled
+        refreshInterval: config.refreshInterval || AD_REFRESH_INTERVAL
+    ,
+        debug: config.debug || false,
         ...config
       };
 
@@ -30,94 +32,79 @@
       this.loadedAds = new Map();
       this.isInitialized = false;
 
-      this.log('COAD AdSDK initialized', this.config);
+      this.log('Initialized', this.config);
     }
 
-    // Initialize the SDK
     async init() {
       if (this.isInitialized) {
-        this.log('SDK already initialized');
+        this.log('Already initialized');
         return;
       }
 
       try {
-        this.log('Initializing COAD AdSDK...');
-
-        // Check API connectivity first
+        this.log('Initializing...');
         await this.checkAPIConnectivity();
 
-        // Auto-detect publisher configuration if no publisherId provided
         if (!this.config.publisherId) {
-          this.log('No Publisher ID provided, attempting auto-detection...');
-          await this.autoDetectPublisherConfig();
+          this.log('No Publisher ID provided, fetching publisher config by domain...');
+          await this.fetchPublisherConfigByDomain();
         } else {
-          this.log('Using provided Publisher ID:', this.config.publisherId);
-          // Load publisher configuration from API using provided ID
-          await this.loadPublisherConfig();
+          this.log(`Publisher ID provided: ${this.config.publisherId}, fetching publisher config by id...`);
+          await this.fetchPublisherConfigById();
         }
 
-        // Validate that we have a publisher ID after detection/loading
         if (!this.config.publisherId) {
-          throw new Error('Unable to determine Publisher ID. Please register this website in the COAD publisher dashboard.');
+          throw new Error('Unable to determine Publisher ID. Please register this website in the CoAd Publisher Dashboard');
         }
 
-        // Create ad containers for specified placements with retry logic
         await this.createAdContainersWithRetry();
-
-        // Set up refresh interval
-        this.setupRefreshInterval();
-
-        // Add CSS styles
+        this.setupAdRefresh();
         this.injectStyles();
-
-        // Set up DOM observer for dynamic content
         this.setupDOMObserver();
 
         this.isInitialized = true;
-        this.log('COAD AdSDK initialized successfully');
+        this.log('Initialized successfully');
 
-        // Dispatch initialization event
-        this.dispatchEvent('coad:initialized', { sdk: this });
-
+        this.dispatchEvent('CoAd:initialized', { sdk: this });
       } catch (error) {
-        this.error('Failed to initialize SDK:', error);
+        this.error('Failed to initialize:', error);
         throw error;
       }
     }
 
-    // Check API connectivity
     async checkAPIConnectivity() {
       try {
         this.log('Checking API connectivity...');
+        // TODO: Update Ad Serving Engine health check endpoint
         const response = await fetch(`${this.config.apiUrl.replace('/api', '')}/health`, {
           method: 'GET',
           headers: { 'Accept': 'application/json' }
         });
 
         if (response.ok) {
-          this.log('✅ API connectivity verified');
+          this.log('Health check Ad Serving Engine success');
         } else {
-          throw new Error(`API health check failed: ${response.status}`);
+          throw new Error(`Health check Ad Serving Engine success failed: ${response.status}`);
         }
       } catch (error) {
-        this.error('❌ API connectivity check failed:', error);
-        throw new Error(`Cannot connect to COAD API at ${this.config.apiUrl}`);
+        this.error('Health check Ad Serving Engine failed:', error);
+        throw new Error(`Cannot connect to Ad Serving Engine at ${this.config.apiUrl}`);
       }
     }
 
-    // Auto-detect publisher configuration by domain
-    async autoDetectPublisherConfig() {
+    async fetchPublisherConfigByDomain() {
       try {
-        this.log('Auto-detecting publisher configuration...');
+        this.log('Fetching publisher config by domain...');
         this.log('Current domain:', window.location.hostname);
         this.log('Current URL:', window.location.origin);
 
-        // Try to get config by domain first
+        // TODO: Update query params to call Ad Serving Engine API
         const params = new URLSearchParams({
           domain: window.location.hostname,
           url: window.location.origin
         });
 
+        // TODO: Update Ad Serving Engine API path to get publisher's config by domain
         const response = await fetch(`${this.config.apiUrl}/bot/config-by-domain?${params}`);
 
         if (!response.ok) {
@@ -125,27 +112,25 @@
             const errorData = await response.json();
             throw new Error(`Website not registered: ${errorData.error}. ${errorData.suggestion || ''}`);
           }
-          throw new Error(`Failed to auto-detect publisher config: ${response.status}`);
+          throw new Error(`Failed to fetch publisher config by domain: ${response.status}`);
         }
 
         const config = await response.json();
-
-        // Merge API config with local config
         this.config = { ...this.config, ...config };
 
-        this.log('✅ Publisher configuration auto-detected:', config);
-        this.log(`✅ Matched by: ${config.matchedBy}, Publisher ID: ${config.publisherId}`);
+        this.log('Publisher config:', config);
+        this.log(`Matched by: ${config.matchedBy}, Publisher ID: ${config.publisherId}`);
 
       } catch (error) {
-        this.error('❌ Failed to auto-detect publisher configuration:', error);
+        this.error('Failed to fetch publisher config by domain:', error);
         throw error;
       }
     }
 
-    // Load publisher configuration from API
-    async loadPublisherConfig() {
+    async fetchPublisherConfigById() {
       try {
-        this.log('Loading publisher configuration...');
+        this.log('Fetching publisher config by id...');
+        // TODO: Update Ad Serving Engine API path to get publisher's config by id
         const response = await fetch(`${this.config.apiUrl}/bot/config/${this.config.publisherId}`);
 
         if (!response.ok) {
@@ -153,20 +138,15 @@
         }
 
         const config = await response.json();
-
-        // Merge API config with local config
         this.config = { ...this.config, ...config };
 
-        this.log('✅ Publisher configuration loaded:', config);
+        this.log('Publisher config:', config);
       } catch (error) {
-        this.error('❌ Failed to load publisher configuration:', error);
-        this.log('Continuing with local configuration...');
-        // Continue with local configuration
+        this.error('Failed to fetch publisher config by id:', error);
       }
     }
 
-    // Create ad containers with retry logic for React apps
-    async createAdContainersWithRetry(maxRetries = 5, delay = 1000) {
+    async createAdContainersWithRetry(maxRetries = CONTAINER_CREATION_MAX_RETRIES, delay = CONTAINER_INITIAL_RETRY_DELAY) {
       let attempt = 0;
 
       while (attempt < maxRetries) {
@@ -177,7 +157,6 @@
 
         if (this.adContainers.size > 0) {
           this.log(`Successfully created ${this.adContainers.size} ad containers`);
-          // Load ads after successful container creation
           await this.loadAds();
           return;
         }
@@ -185,40 +164,35 @@
         if (attempt < maxRetries) {
           this.log(`No containers created, retrying in ${delay}ms...`);
           await new Promise(resolve => setTimeout(resolve, delay));
-          // Increase delay for next attempt
-          delay = Math.min(delay * 1.5, 5000);
+          delay = Math.min(delay * 1.5, CONTAINER_MAX_RETRY_DELAY);
         }
       }
 
       this.error(`Failed to create ad containers after ${maxRetries} attempts`);
     }
 
-    // Create ad containers for each placement
     createAdContainers() {
-      this.config.placements.forEach((placement, index) => {
+      this.config.placements.forEach((placement, placementIndex) => {
         try {
           const elements = document.querySelectorAll(placement);
-
           this.log(`Looking for placement: ${placement}, found ${elements.length} elements`);
 
           if (elements.length === 0) {
-            this.log(`Warning: No elements found for selector "${placement}"`);
+            this.log(`No elements found for selector "${placement}"`);
             return;
           }
 
           elements.forEach((element, elementIndex) => {
-            const containerId = `coad-ad-${this.config.publisherId}-${index}-${elementIndex}`;
+            const containerId = `CoAd-ad-${this.config.publisherId}-${placementIndex}-${elementIndex}`;
 
-            // Check if container already exists
             if (this.adContainers.has(containerId)) {
               this.log(`Container ${containerId} already exists, skipping`);
               return;
             }
 
-            // Create ad container
             const adContainer = document.createElement('div');
             adContainer.id = containerId;
-            adContainer.className = 'coad-ad-container';
+            adContainer.className = 'CoAd-ad-container';
             adContainer.setAttribute('data-placement', placement);
             adContainer.setAttribute('data-publisher', this.config.publisherId);
 
@@ -239,7 +213,6 @@
       });
     }
 
-    // Load ads for all containers
     async loadAds() {
       const loadPromises = Array.from(this.adContainers.keys()).map(containerId => 
         this.loadAdForContainer(containerId)
@@ -253,7 +226,6 @@
       }
     }
 
-    // Load ad for specific container with retry logic
     async loadAdForContainer(containerId, retryCount = 0) {
       const container = this.adContainers.get(containerId);
 
@@ -262,22 +234,18 @@
         return;
       }
 
-      const maxRetries = 3;
-      const retryDelay = 1000 * (retryCount + 1); // Exponential backoff
+      const retryDelay = AD_INITIAL_RETRY_DELAY * (retryCount + 1);
 
       try {
-        // Show loading state
-        container.element.innerHTML = '<div class="coad-ad-loading">Loading ad...</div>';
+        container.element.innerHTML = '<div class="CoAd-ad-loading">Loading ad...</div>';
+        this.log(`Loading ad for container: ${containerId} (attempt ${retryCount + 1}/${AD_MAX_LOAD_RETRIES + 1})`);
 
-        this.log(`Loading ad for container: ${containerId} (attempt ${retryCount + 1}/${maxRetries + 1})`);
-
-        // Build request URL
+        // TODO: Update Ad Serving Engine API path to get ads
         const adUrl = `${this.config.apiUrl}/ads?publisherId=${encodeURIComponent(this.config.publisherId)}&placement=${encodeURIComponent(container.placement)}`;
         this.log(`Fetching ad from: ${adUrl}`);
 
-        // Fetch ad from API with timeout
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), AD_REQUEST_TIMEOUT);
 
         const response = await fetch(adUrl, {
           method: 'GET',
@@ -289,7 +257,6 @@
         });
 
         clearTimeout(timeoutId);
-
         this.log(`Ad request response: ${response.status} ${response.statusText}`);
 
         if (!response.ok) {
@@ -297,43 +264,34 @@
         }
 
         const adData = await response.json();
-
         if (!adData.success || !adData.ad) {
           throw new Error('Invalid ad data received');
         }
-
         this.log(`Ad data received:`, adData);
 
-        // Render the ad
         this.renderAd(containerId, adData.ad);
-
-        // Store loaded ad data
         this.loadedAds.set(containerId, adData);
-
-        this.log(`✅ Ad successfully loaded for container: ${containerId}`);
+        this.log(`Ad successfully loaded for container: ${containerId}`);
 
       } catch (error) {
-        this.error(`❌ Failed to load ad for container ${containerId} (attempt ${retryCount + 1}):`, error);
+        this.error(`Failed to load ad for container ${containerId} (attempt ${retryCount + 1}):`, error);
 
-        // Retry logic
-        if (retryCount < maxRetries) {
+        if (retryCount < AD_MAX_LOAD_RETRIES) {
           this.log(`Retrying in ${retryDelay}ms...`);
-          container.element.innerHTML = `<div class="coad-ad-loading">Loading ad... (retry ${retryCount + 1}/${maxRetries})</div>`;
+          container.element.innerHTML = `<div class="CoAd-ad-loading">Loading ad... (retry ${retryCount + 1}/${AD_MAX_LOAD_RETRIES})</div>`;
 
           setTimeout(() => {
             this.loadAdForContainer(containerId, retryCount + 1);
           }, retryDelay);
         } else {
-          // Show final error state
-          container.element.innerHTML = `<div class="coad-ad-error">
-            Ad failed to load after ${maxRetries + 1} attempts<br>
+          container.element.innerHTML = `<div class="CoAd-ad-error">
+            Ad failed to load after ${AD_MAX_LOAD_RETRIES + 1} attempts<br>
             <small>Error: ${error.message}</small>
           </div>`;
         }
       }
     }
 
-    // Render ad content
     renderAd(containerId, adData) {
       const container = this.adContainers.get(containerId);
       
@@ -341,34 +299,28 @@
         return;
       }
 
-      // Create ad wrapper
       const adWrapper = document.createElement('div');
-      adWrapper.className = 'coad-ad-wrapper';
+      adWrapper.className = 'CoAd-ad-wrapper';
       adWrapper.setAttribute('data-ad-id', adData.id);
       adWrapper.setAttribute('data-ad-type', adData.type);
 
-      // Set ad content
       adWrapper.innerHTML = adData.content;
 
-      // Add click tracking
       adWrapper.addEventListener('click', () => {
         this.trackAdClick(adData.id, containerId);
       });
 
-      // Replace container content
       container.element.innerHTML = '';
       container.element.appendChild(adWrapper);
 
-      // Track ad impression
+      // TODO: remove this logic, replace Ad impression with pixel tracking in ad's iframe
       this.trackAdImpression(adData.id, containerId);
     }
 
-    // Track ad impression
     trackAdImpression(adId, containerId) {
       this.log(`Ad impression: ${adId} in ${containerId}`);
       
-      // In a real implementation, send tracking data to analytics
-      this.dispatchEvent('coad:impression', {
+      this.dispatchEvent('CoAd:impression', {
         adId,
         containerId,
         publisherId: this.config.publisherId,
@@ -376,12 +328,11 @@
       });
     }
 
-    // Track ad click
+    // TODO: update this logic to properly handle ad clicks
     trackAdClick(adId, containerId) {
       this.log(`Ad click: ${adId} in ${containerId}`);
       
-      // In a real implementation, send tracking data to analytics
-      this.dispatchEvent('coad:click', {
+      this.dispatchEvent('CoAd:click', {
         adId,
         containerId,
         publisherId: this.config.publisherId,
@@ -389,7 +340,7 @@
       });
     }
 
-    // Set up DOM observer for dynamic content changes
+    // Watches for new elements being added to the page that might match ad placement selectors
     setupDOMObserver() {
       if (!window.MutationObserver) {
         this.log('MutationObserver not supported, skipping DOM observation');
@@ -401,14 +352,12 @@
 
         mutations.forEach((mutation) => {
           if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-            // Check if any of our target elements were added
             mutation.addedNodes.forEach((node) => {
               if (node.nodeType === Node.ELEMENT_NODE) {
                 this.config.placements.forEach((placement) => {
                   if (node.matches && node.matches(placement)) {
                     shouldCheckForNewElements = true;
                   }
-                  // Also check if the added node contains our target elements
                   if (node.querySelector && node.querySelector(placement)) {
                     shouldCheckForNewElements = true;
                   }
@@ -427,7 +376,6 @@
         }
       });
 
-      // Start observing
       this.domObserver.observe(document.body, {
         childList: true,
         subtree: true
@@ -436,8 +384,7 @@
       this.log('DOM observer set up for dynamic content detection');
     }
 
-    // Set up automatic ad refresh
-    setupRefreshInterval() {
+    setupAdRefresh() {
       if (this.config.refreshInterval > 0) {
         setInterval(() => {
           this.log('Refreshing ads...');
@@ -446,22 +393,21 @@
       }
     }
 
-    // Inject CSS styles
     injectStyles() {
       const styles = `
-        .coad-ad-container {
+        .CoAd-ad-container {
           margin: 0;
           text-align: center;
           min-height: 50px;
           position: relative;
-          z-index: 999999;
+          z-placementIndex: 999999;
           clear: both;
           display: flex;
           justify-content: center;
           align-items: center;
         }
 
-        .coad-ad-wrapper {
+        .CoAd-ad-wrapper {
           display: flex;
           justify-content: center;
           align-items: center;
@@ -472,21 +418,21 @@
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
           transition: transform 0.2s ease;
           position: relative;
-          z-index: 999999;
+          z-placementIndex: 999999;
           background: white;
         }
 
-        .coad-ad-wrapper iframe {
+        .CoAd-ad-wrapper iframe {
           display: block;
           margin: 0 auto;
         }
 
-        .coad-ad-wrapper:hover {
+        .CoAd-ad-wrapper:hover {
           transform: translateY(-2px);
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
 
-        .coad-ad-loading {
+        .CoAd-ad-loading {
           padding: 20px;
           color: #666;
           font-size: 14px;
@@ -495,10 +441,10 @@
           border: 2px dashed #ccc;
           animation: pulse 2s infinite;
           position: relative;
-          z-index: 999999;
+          z-placementIndex: 999999;
         }
 
-        .coad-ad-error {
+        .CoAd-ad-error {
           padding: 15px;
           color: #e74c3c;
           font-size: 12px;
@@ -506,7 +452,7 @@
           border: 1px solid #f5c6cb;
           border-radius: 6px;
           position: relative;
-          z-index: 999999;
+          z-placementIndex: 999999;
         }
 
         @keyframes pulse {
@@ -516,7 +462,7 @@
         }
 
         @media (max-width: 768px) {
-          .coad-ad-container {
+          .CoAd-ad-container {
             margin: 15px 0;
           }
         }
@@ -527,26 +473,21 @@
       const styleSheet = document.createElement('style');
       styleSheet.textContent = styles;
       document.head.appendChild(styleSheet);
-
-
     }
 
-    // Dispatch custom events
     dispatchEvent(eventName, detail) {
       const event = new CustomEvent(eventName, { detail });
       window.dispatchEvent(event);
     }
 
-    // Logging utility
     log(...args) {
       if (this.config.debug) {
-        console.log('[COAD SDK]', ...args);
+        console.log('[CoAd SDK]', ...args);
       }
     }
 
-    // Error logging utility
     error(...args) {
-      console.error('[COAD SDK ERROR]', ...args);
+      console.error('[CoAd SDK ERROR]', ...args);
     }
 
     // Public API methods
@@ -555,7 +496,6 @@
       this.loadAds();
     }
 
-    // Force re-initialization (useful for debugging)
     forceReinit() {
       this.log('Force re-initialization triggered');
       this.isInitialized = false;
@@ -564,7 +504,6 @@
       this.init();
     }
 
-    // Get current status
     getStatus() {
       return {
         initialized: this.isInitialized,
@@ -575,15 +514,13 @@
     }
 
     destroy() {
-      this.log('Destroying COAD SDK...');
+      this.log('Destroying CoAd SDK...');
 
-      // Stop DOM observer
       if (this.domObserver) {
         this.domObserver.disconnect();
         this.domObserver = null;
       }
 
-      // Remove ad containers
       this.adContainers.forEach((container) => {
         container.element.remove();
       });
@@ -595,20 +532,20 @@
   }
 
   // Auto-initialize with or without configuration
-  const config = window.COADConfig || {};
-  const sdk = new COADAdSDK(config);
+  const config = window.CoAdConfig || {};
+  const sdk = new CoAdSDK(config);
 
   // Multiple initialization strategies for different scenarios
   const initializeSDK = () => {
     sdk.init().catch(error => {
-      console.error('[COAD SDK] Initialization failed:', error);
-      console.error('[COAD SDK] Error details:', error.message);
+      console.error('[CoAd SDK] Initialization failed:', error);
+      console.error('[CoAd SDK] Error details:', error.message);
 
       // If it's a registration error, show helpful message
       if (error.message.includes('not registered')) {
-        console.warn('[COAD SDK] 💡 To fix this: Register your website at the COAD publisher dashboard');
-        console.warn('[COAD SDK] 💡 Current domain:', window.location.hostname);
-        console.warn('[COAD SDK] 💡 Current URL:', window.location.origin);
+        console.warn('[CoAd SDK] To fix this: Register your website at the CoAd publisher dashboard');
+        console.warn('[CoAd SDK] Current domain:', window.location.hostname);
+        console.warn('[CoAd SDK] Current URL:', window.location.origin);
       }
 
       // Don't retry for registration errors
@@ -643,11 +580,18 @@
     }
   }, 1000);
 
+  // TODO: remove in production
   // Expose SDK instance globally
-  window.COAD.sdk = sdk;
+  window.CoAd.sdk = sdk;
 
+  // TODO: remove in production
   // Expose SDK class for manual initialization
-  window.COAD.AdSDK = COADAdSDK;
-  window.COAD.version = SDK_VERSION;
+  window.CoAd.AdSDK = CoAdSDK;
+  window.CoAd.version = SDK_VERSION;
 
+  // Console usage: 
+  // window.CoAd.sdk.refresh()
+  // window.CoAd.sdk.destroy()
+  // window.CoAd.sdk.getStatus()
+  // window.CoAd.sdk.forceReinit()
 })();
