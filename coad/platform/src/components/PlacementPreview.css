@@ -51,34 +51,19 @@
   display: inline-block;
 }
 
-.placement-description {
-  color: #6b7280;
-  font-size: 0.9rem;
-  line-height: 1.4;
-}
 
-.placement-meta {
+
+.placement-dimensions {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
-.slot-type-badge {
-  background: #007bff;
-  color: white;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  text-transform: capitalize;
+  justify-content: center;
+  margin-top: 12px;
 }
 
 .dimensions-text {
-  font-size: 0.75rem;
-  color: #6c757d;
+  font-size: 0.9rem;
+  color: #495057;
   font-family: 'Courier New', monospace;
+  font-weight: 600;
 }
 
 .placement-preview-container {
@@ -189,12 +174,6 @@
 @media (max-width: 768px) {
   .placement-preview-header {
     flex-direction: column;
-    gap: 8px;
-  }
-  
-  .placement-meta {
-    align-items: flex-start;
-    flex-direction: row;
     gap: 8px;
   }
   

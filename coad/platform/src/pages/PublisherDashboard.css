@@ -1387,6 +1387,14 @@
   align-items: center;
 }
 
+.delete-website-section {
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: center;
+}
+
 .btn-danger {
   background: #dc2626;
   color: white;

@@ -2,16 +2,6 @@ import React from 'react'
 import './PlacementPreview.css'
 
 const PlacementPreview = ({ placement, showDetails = true }) => {
-  const getSlotIcon = (slotType) => {
-    const icons = {
-      top: '📰',
-      sidebar: '📋',
-      catfish: '🐟',
-      logo: '🏷️'
-    }
-    return icons[slotType] || '📍'
-  }
-
   const getSlotDimensions = (slotType) => {
     const dimensions = {
       top: { width: 800, height: 150 },
@@ -55,15 +45,9 @@ const PlacementPreview = ({ placement, showDetails = true }) => {
       {showDetails && (
         <div className="placement-preview-header">
           <div className="placement-info">
-            <span className="slot-icon">{getSlotIcon(slotType)}</span>
             <div className="placement-details">
               <code className="placement-selector">{placement.selector}</code>
-              <span className="placement-description">{placement.description}</span>
             </div>
-          </div>
-          <div className="placement-meta">
-            <span className="slot-type-badge">{slotType}</span>
-            <span className="dimensions-text">{dimensions.width}×{dimensions.height}px</span>
           </div>
         </div>
       )}
@@ -91,6 +75,12 @@ const PlacementPreview = ({ placement, showDetails = true }) => {
           )}
         </div>
       </div>
+
+      {showDetails && (
+        <div className="placement-dimensions">
+          <span className="dimensions-text">{dimensions.width}×{dimensions.height}px</span>
+        </div>
+      )}
     </div>
   )
 }

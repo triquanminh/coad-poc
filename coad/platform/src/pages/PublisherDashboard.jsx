@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import SlotSelector from '../components/SlotSelector'
-import SlotSelectorAssignment from '../components/SlotSelectorAssignment'
+
 import PlacementPreview from '../components/PlacementPreview'
 import './PublisherDashboard.css'
 
@@ -740,7 +740,7 @@ function WebsiteManagement({ onWebsiteAdded, onNavigateToNext, selectedPlacement
               onClick={handleShowRegistration}
               className="btn btn-primary btn-sm"
             >
-              ➕ Add Website
+            Add Website
             </button>
           </div>
 
@@ -913,7 +913,7 @@ function AdPlacementManager({ website, selectedPlacements, setSelectedPlacements
   const [error, setError] = useState('')
   const [showSlotSelector, setShowSlotSelector] = useState(false)
   const [selectedSlots, setSelectedSlots] = useState([])
-  const [showSlotAssignment, setShowSlotAssignment] = useState(false)
+
 
   useEffect(() => {
     loadPlacements()
@@ -952,23 +952,17 @@ function AdPlacementManager({ website, selectedPlacements, setSelectedPlacements
   const handleSlotsSelected = (slots) => {
     console.log('handleSlotsSelected called with:', slots)
     setSelectedSlots(slots)
-    if (slots.length > 0) {
-      setShowSlotAssignment(true)
-      setShowSlotSelector(false)
-    }
   }
 
   const handleSlotPlacementsCreated = (newPlacements) => {
     setPlacements(prev => [...prev, ...newPlacements])
     setSelectedPlacements(prev => [...prev, ...newPlacements])
-    setShowSlotAssignment(false)
     setShowSlotSelector(false)
     setSelectedSlots([])
   }
 
   const handleCancelSlotSelection = () => {
     setShowSlotSelector(false)
-    setShowSlotAssignment(false)
     setSelectedSlots([])
   }
 
@@ -1007,10 +1001,10 @@ function AdPlacementManager({ website, selectedPlacements, setSelectedPlacements
         </div>
         <div className="header-actions">
           <button
-            onClick={handleDeleteWebsite}
-            className="btn btn-danger btn-sm"
+            onClick={handleAddSlots}
+            className="btn btn-primary slot-btn"
           >
-            🗑️ Delete Website
+            Add Ad Slot
           </button>
         </div>
       </div>
@@ -1021,62 +1015,18 @@ function AdPlacementManager({ website, selectedPlacements, setSelectedPlacements
         <div className="slot-selection-modal">
           <div className="modal-content">
             <div className="modal-header">
-              <h3>Select Ad Slot Types</h3>
+              <h3>Add Ad Slots</h3>
               <button onClick={handleCancelSlotSelection} className="close-btn">×</button>
             </div>
             <SlotSelector
               onSlotsSelected={handleSlotsSelected}
               selectedSlots={selectedSlots}
-            />
-            <div className="modal-actions">
-              <button onClick={handleCancelSlotSelection} className="btn btn-secondary">
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  console.log('Continue button clicked with slots:', selectedSlots);
-                  if (selectedSlots.length > 0) {
-                    setShowSlotAssignment(true);
-                    setShowSlotSelector(false);
-                  }
-                }}
-                disabled={selectedSlots.length === 0}
-                className="btn btn-primary"
-              >
-                Continue with {selectedSlots.length} slots
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showSlotAssignment && (
-        <div className="slot-assignment-modal">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h3>Assign CSS Selectors</h3>
-              <button onClick={handleCancelSlotSelection} className="close-btn">×</button>
-            </div>
-            <SlotSelectorAssignment
               website={website}
-              selectedSlots={selectedSlots}
               onPlacementsCreated={handleSlotPlacementsCreated}
             />
           </div>
         </div>
       )}
-
-      <div className="add-selector-section">
-        <h4>Add Ad Placements</h4>
-        <div className="placement-options">
-          <button
-            onClick={handleAddSlots}
-            className="btn btn-primary slot-btn"
-          >
-            📍 Select Ad Slot Types
-          </button>
-        </div>
-      </div>
 
       <div className="placements-list-section">
         <h4>Current Placements ({placements.length})</h4>
@@ -1097,12 +1047,21 @@ function AdPlacementManager({ website, selectedPlacements, setSelectedPlacements
                   className="remove-placement-btn"
                   title="Remove placement"
                 >
-                  🗑️ Remove
+                Remove
                 </button>
               </div>
             ))}
           </div>
         )}
+      </div>
+
+      <div className="delete-website-section">
+        <button
+          onClick={handleDeleteWebsite}
+          className="btn btn-danger btn-sm"
+        >
+        Delete Website
+        </button>
       </div>
     </div>
   )
@@ -1309,7 +1268,7 @@ function WebsitesOverview() {
             🔄 Refresh
           </button>
           <Link to="/publisher/manage" className="btn btn-primary">
-            ➕ Add Website
+          Add Website
           </Link>
         </div>
       </div>

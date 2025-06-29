@@ -98,16 +98,6 @@ const SlotSelectorAssignment = ({ website, selectedSlots, onPlacementsCreated })
     }
   }
 
-  const getSlotIcon = (slotType) => {
-    const icons = {
-      top: '📰',
-      sidebar: '📋',
-      catfish: '🐟',
-      logo: '🏷️'
-    }
-    return icons[slotType] || '📍'
-  }
-
   const getSampleSelectors = (slotType) => {
     const samples = {
       top: ['header', '.header-banner', '#top-ad', '.navbar + div'],
@@ -145,7 +135,6 @@ const SlotSelectorAssignment = ({ website, selectedSlots, onPlacementsCreated })
             <div key={slotType} className="slot-assignment-card">
               <div className="slot-assignment-header">
                 <div className="slot-info">
-                  <span className="slot-icon">{getSlotIcon(slotType)}</span>
                   <div>
                     <h4 className="slot-name">{slot.name}</h4>
                     <div className="slot-details">
