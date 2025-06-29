@@ -53,6 +53,11 @@ class Database {
         selector TEXT NOT NULL,
         description TEXT,
         priority TEXT DEFAULT 'medium',
+        slot_type TEXT,
+        width INTEGER,
+        height INTEGER,
+        position_type TEXT DEFAULT 'relative',
+        is_dismissible BOOLEAN DEFAULT 0,
         is_active BOOLEAN DEFAULT 1,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (website_id) REFERENCES websites (id) ON DELETE CASCADE
@@ -62,6 +67,8 @@ class Database {
         console.error('Error creating ad_placements table:', err.message)
       } else {
         console.log('Ad placements table ready')
+        // Add columns to existing table if they don't exist
+        this.addSlotColumnsIfNotExists()
       }
     })
 
@@ -82,6 +89,43 @@ class Database {
         console.error('Error creating health_checks table:', err.message)
       } else {
         console.log('Health checks table ready')
+      }
+    })
+  }
+
+  addSlotColumnsIfNotExists() {
+    // Add slot_type column if it doesn't exist
+    this.db.run(`ALTER TABLE ad_placements ADD COLUMN slot_type TEXT`, (err) => {
+      if (err && !err.message.includes('duplicate column name')) {
+        console.error('Error adding slot_type column:', err.message)
+      }
+    })
+
+    // Add width column if it doesn't exist
+    this.db.run(`ALTER TABLE ad_placements ADD COLUMN width INTEGER`, (err) => {
+      if (err && !err.message.includes('duplicate column name')) {
+        console.error('Error adding width column:', err.message)
+      }
+    })
+
+    // Add height column if it doesn't exist
+    this.db.run(`ALTER TABLE ad_placements ADD COLUMN height INTEGER`, (err) => {
+      if (err && !err.message.includes('duplicate column name')) {
+        console.error('Error adding height column:', err.message)
+      }
+    })
+
+    // Add position_type column if it doesn't exist
+    this.db.run(`ALTER TABLE ad_placements ADD COLUMN position_type TEXT DEFAULT 'relative'`, (err) => {
+      if (err && !err.message.includes('duplicate column name')) {
+        console.error('Error adding position_type column:', err.message)
+      }
+    })
+
+    // Add is_dismissible column if it doesn't exist
+    this.db.run(`ALTER TABLE ad_placements ADD COLUMN is_dismissible BOOLEAN DEFAULT 0`, (err) => {
+      if (err && !err.message.includes('duplicate column name')) {
+        console.error('Error adding is_dismissible column:', err.message)
       }
     })
   }
@@ -265,22 +309,39 @@ class Database {
   async addAdPlacement(websiteId, placementData) {
     return new Promise((resolve, reject) => {
       const id = uuidv4()
-      const { selector, description, priority = 'medium' } = placementData
+      const {
+        selector,
+        description,
+        priority = 'medium',
+        slotType,
+        width,
+        height,
+        positionType = 'relative',
+        isDismissible = false
+      } = placementData
 
       this.db.run(`
-        INSERT INTO ad_placements (id, website_id, selector, description, priority)
-        VALUES (?, ?, ?, ?, ?)
-      `, [id, websiteId, selector, description, priority], 
+        INSERT INTO ad_placements (
+          id, website_id, selector, description, priority,
+          slot_type, width, height, position_type, is_dismissible
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [id, websiteId, selector, description, priority, slotType, width, height, positionType, isDismissible],
       function(err) {
         if (err) {
           reject(err)
         } else {
           resolve({
             id,
-            websiteId,
+            website_id: websiteId,
             selector,
             description,
-            priority
+            priority,
+            slot_type: slotType,
+            width,
+            height,
+            position_type: positionType,
+            is_dismissible: isDismissible
           })
         }
       })

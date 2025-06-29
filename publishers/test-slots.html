@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Slot Implementation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .header {
+            background: #333;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .container {
+            display: flex;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .main-content {
+            flex: 2;
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        
+        .sidebar {
+            flex: 1;
+            background: #e9e9e9;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        
+        .logo {
+            display: inline-block;
+            background: #007bff;
+            color: white;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px;
+        }
+        
+        h1, h2 {
+            color: #333;
+        }
+        
+        p {
+            margin-bottom: 15px;
+        }
+    </style>
+    <!-- CoAd SDK -->
+    <script src="http://localhost:4001/adsdk.js" async></script>
+</head>
+<body>
+    <div class="header">
+        <h1>Test Website for Slot Implementation</h1>
+        <div class="logo">Logo Area</div>
+    </div>
+    
+    <div class="container">
+        <div class="main-content">
+            <h2>Main Content Area</h2>
+            <p>This is the main content area where we can test different ad slot types.</p>
+            <p>The top banner slot should appear above this content area.</p>
+            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+            <p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+            <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</p>
+            <p>Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+        </div>
+        
+        <div class="sidebar">
+            <h2>Sidebar</h2>
+            <p>This is the sidebar area where vertical ads should appear.</p>
+            <p>Sidebar ads are typically 150x800 pixels.</p>
+            <ul>
+                <li>Navigation item 1</li>
+                <li>Navigation item 2</li>
+                <li>Navigation item 3</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div style="margin-top: 40px; padding: 20px; background: #f0f0f0; text-align: center;">
+        <p>Footer area - The catfish ad should appear at the bottom of the screen with a dismiss button.</p>
+    </div>
+    
+    <script>
+        // Log when the page loads
+        console.log('Test page loaded, AdSDK should initialize automatically');
+        
+        // Add some debugging
+        window.addEventListener('load', () => {
+            console.log('Page fully loaded');
+            setTimeout(() => {
+                console.log('AdSDK containers:', document.querySelectorAll('.CoAd-ad-container'));
+            }, 2000);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,296 @@
+.slot-selector {
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.slot-selector-header {
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.slot-selector-header h3 {
+  margin: 0 0 8px 0;
+  color: #2c3e50;
+  font-size: 1.4em;
+}
+
+.slot-selector-header p {
+  margin: 0;
+  color: #6c757d;
+  font-size: 0.95em;
+}
+
+.slot-selector-loading,
+.slot-selector-error {
+  text-align: center;
+  padding: 40px;
+  color: #6c757d;
+}
+
+.slot-selector-error {
+  color: #dc3545;
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+}
+
+.slots-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.slot-card {
+  background: white;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.slot-card:hover {
+  border-color: #007bff;
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.15);
+}
+
+.slot-card.selected {
+  border-color: #007bff;
+  background: #f0f8ff;
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.2);
+}
+
+.slot-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.slot-icon {
+  font-size: 1.5em;
+  flex-shrink: 0;
+}
+
+.slot-info {
+  flex: 1;
+}
+
+.slot-name {
+  margin: 0 0 4px 0;
+  font-size: 1.1em;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.slot-dimensions {
+  font-size: 0.85em;
+  color: #6c757d;
+  font-family: 'Courier New', monospace;
+}
+
+
+
+.slot-description {
+  color: #495057;
+  font-size: 0.9em;
+  line-height: 1.4;
+  margin-bottom: 12px;
+}
+
+.slot-features {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.position-badge,
+.feature-badge {
+  font-size: 0.75em;
+  padding: 2px 6px;
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+.position-badge.fixed {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.position-badge.relative {
+  background: #d1ecf1;
+  color: #0c5460;
+  border: 1px solid #bee5eb;
+}
+
+.feature-badge.dismissible {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.slot-preview {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 4px;
+  border: 1px dashed #dee2e6;
+  position: relative;
+}
+
+.slot-preview-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.slot-preview-container.catfish {
+  border: 2px dashed #45b7d1;
+  border-radius: 6px;
+  padding: 8px;
+  background: rgba(69, 183, 209, 0.05);
+}
+
+.slot-preview-box {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 0.7em;
+  font-weight: 500;
+  text-align: center;
+  min-width: 40px;
+  min-height: 20px;
+  position: relative;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.slot-preview-box.top {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+}
+
+.slot-preview-box.sidebar {
+  background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+}
+
+.slot-preview-box.catfish {
+  background: linear-gradient(135deg, #45b7d1 0%, #96c93d 100%);
+  border-radius: 6px;
+}
+
+.slot-preview-box.logo {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.preview-label {
+  font-size: 0.8em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Catfish-specific styling */
+.catfish-dismiss-btn {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 16px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #333;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+}
+
+.catfish-dismiss-btn:hover {
+  background: white;
+  transform: scale(1.1);
+}
+
+.catfish-position-indicator {
+  font-size: 0.65em;
+  color: #45b7d1;
+  font-weight: 600;
+  text-align: center;
+  margin-top: 2px;
+}
+
+/* Remove sidebar position indicator and vertical text */
+.slot-preview-box.sidebar {
+  background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+}
+
+.slot-preview-box.sidebar .preview-label {
+  font-size: 0.7em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Logo preview should be square */
+.slot-preview-box.logo {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+/* Top banner preview should be wider */
+.slot-preview-box.top {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+}
+
+.selected-slots-summary {
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.selected-slots-summary h4 {
+  margin: 0 0 12px 0;
+  color: #2c3e50;
+  font-size: 1.1em;
+}
+
+.selected-slots-list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.selected-slot-tag {
+  background: #007bff;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 16px;
+  font-size: 0.85em;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .slots-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .slot-card-header {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .slot-checkbox {
+    align-self: flex-start;
+  }
+}

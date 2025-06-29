@@ -22,8 +22,7 @@
         website: config.website || window.location.origin,
         placements: config.placements || [],
         apiUrl: config.apiUrl || API_BASE_URL,
-        refreshInterval: config.refreshInterval || AD_REFRESH_INTERVAL
-    ,
+        refreshInterval: config.refreshInterval || AD_REFRESH_INTERVAL,
         debug: config.debug || false,
         ...config
       };
@@ -172,8 +171,20 @@
     }
 
     createAdContainers() {
-      this.config.placements.forEach((placement, placementIndex) => {
+      const placements = this.config.placementDetails || this.config.placements.map(p => ({ selector: p }));
+
+      this.log('Processing placements:', placements);
+
+      placements.forEach((placementDetail, placementIndex) => {
         try {
+          const slotType = placementDetail.slot_type;
+
+          if (slotType === 'catfish') {
+            this.createCatfishAd(placementDetail, placementIndex);
+            return;
+          }
+
+          const placement = placementDetail.selector || placementDetail;
           const elements = document.querySelectorAll(placement);
           this.log(`Looking for placement: ${placement}, found ${elements.length} elements`);
 
@@ -196,21 +207,196 @@
             adContainer.setAttribute('data-placement', placement);
             adContainer.setAttribute('data-publisher', this.config.publisherId);
 
-            // Insert the ad container AFTER the target element as a sibling
-            element.insertAdjacentElement('afterend', adContainer);
+            if (placementDetail.slot_type) {
+              adContainer.setAttribute('data-slot-type', placementDetail.slot_type);
+            }
 
+            this.applySlotStyling(adContainer, placementDetail);
+            this.insertAdContainer(adContainer, element, placementDetail);
             this.adContainers.set(containerId, {
               element: adContainer,
               placement: placement,
-              targetElement: element
+              targetElement: element,
+              slotType: placementDetail.slot_type,
+              placementDetail: placementDetail
             });
 
-            this.log(`Created ad container: ${containerId} for placement: ${placement}`);
+            this.log(`Created ad container: ${containerId} for placement: ${placement} (slot: ${placementDetail.slot_type || 'custom'})`);
           });
         } catch (error) {
-          this.error(`Failed to create container for placement ${placement}:`, error);
+          this.error(`Failed to create container for placement ${placementDetail.selector || placementDetail}:`, error);
         }
       });
+    }
+
+    createCatfishAd(placementDetail, placementIndex) {
+      const containerId = `CoAd-catfish-${this.config.publisherId}`;
+
+      if (this.adContainers.has(containerId)) {
+        this.log('Catfish ad already exists, skipping');
+        return;
+      }
+
+      this.log('Creating catfish ad overlay');
+
+      const adContainer = document.createElement('div');
+      adContainer.id = containerId;
+      adContainer.className = 'CoAd-ad-container CoAd-catfish';
+      adContainer.setAttribute('data-placement', 'catfish-overlay');
+      adContainer.setAttribute('data-publisher', this.config.publisherId);
+      adContainer.setAttribute('data-slot-type', 'catfish');
+
+      this.applySlotStyling(adContainer, placementDetail);
+
+      document.body.appendChild(adContainer);
+
+      this.adContainers.set(containerId, {
+        element: adContainer,
+        placement: 'catfish-overlay',
+        targetElement: document.body,
+        slotType: 'catfish',
+        placementDetail: placementDetail
+      });
+
+      this.log(`Created catfish ad container: ${containerId}`);
+    }
+
+    applySlotStyling(container, placementDetail) {
+      const slotType = placementDetail.slot_type;
+
+      if (placementDetail.width && placementDetail.height) {
+        container.style.width = `${placementDetail.width}px`;
+        container.style.height = `${placementDetail.height}px`;
+        container.style.minWidth = `${placementDetail.width}px`;
+        container.style.minHeight = `${placementDetail.height}px`;
+        container.style.maxWidth = `${placementDetail.width}px`;
+        container.style.maxHeight = `${placementDetail.height}px`;
+
+        this.log(`Applied slot dimensions: ${placementDetail.width}x${placementDetail.height} for slot type: ${slotType}`);
+      }
+
+      if (slotType === 'catfish') {
+        container.style.position = 'fixed';
+        container.style.bottom = '0';
+        container.style.left = '50%';
+        container.style.transform = 'translateX(-50%)';
+        container.style.zIndex = '9999';
+        container.style.boxShadow = '0 -4px 20px rgba(0, 0, 0, 0.15)';
+        container.style.backgroundColor = '#ffffff';
+        container.style.border = '1px solid #e0e0e0';
+        container.style.borderBottom = 'none';
+        container.style.pointerEvents = 'auto';
+
+        // Toggle button will be added after ad rendering in renderAd method
+      } else if (slotType === 'top') {
+        container.style.display = 'block';
+        container.style.margin = '10px auto';
+        container.style.textAlign = 'center';
+      } else if (slotType === 'sidebar') {
+        container.style.display = 'block';
+        container.style.margin = '10px 0';
+      } else if (slotType === 'logo') {
+        container.style.display = 'inline-block';
+        container.style.verticalAlign = 'middle';
+        container.style.margin = '0 10px';
+      }
+
+      if (!slotType || slotType !== 'catfish') {
+        container.style.backgroundColor = '#f8f9fa';
+        container.style.border = '1px solid #dee2e6';
+      }
+      container.style.borderRadius = '4px';
+      container.style.overflow = 'hidden';
+      container.style.boxSizing = 'border-box';
+    }
+
+    insertAdContainer(container, targetElement, placementDetail) {
+      const slotType = placementDetail.slot_type;
+
+      if (slotType === 'catfish') {
+        this.log('Catfish container already appended to body');
+      } else {
+        targetElement.insertAdjacentElement('afterend', container);
+      }
+    }
+
+    makeDismissible(container) {
+      this.log('makeDismissible called for container:', container.id);
+      let isMinimized = false;
+
+      const toggleBtn = document.createElement('button');
+      toggleBtn.innerHTML = '▼';
+      toggleBtn.className = 'CoAd-toggle-btn';
+      toggleBtn.style.cssText = `
+        position: absolute !important;
+        top: 8px !important;
+        right: 8px !important;
+        width: 28px !important;
+        height: 28px !important;
+        background: rgba(0, 0, 0, 0.8) !important;
+        color: white !important;
+        border: 2px solid rgba(255, 255, 255, 0.5) !important;
+        border-radius: 50% !important;
+        font-size: 12px !important;
+        font-weight: bold !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        cursor: pointer !important;
+        z-index: 100001 !important;
+        transition: all 0.3s ease !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+      `;
+
+      toggleBtn.addEventListener('click', () => {
+        if (!isMinimized) {
+          container.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease';
+          container.style.transform = 'translateX(-50%) translateY(calc(100% - 40px))';
+          container.style.opacity = '0.9';
+          toggleBtn.innerHTML = '▲';
+          toggleBtn.style.background = 'rgba(69, 183, 209, 0.8)';
+          isMinimized = true;
+          this.log('Catfish ad minimized by user');
+        } else {
+          container.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease';
+          container.style.transform = 'translateX(-50%) translateY(0)';
+          container.style.opacity = '1';
+          toggleBtn.innerHTML = '▼';
+          toggleBtn.style.background = 'rgba(0, 0, 0, 0.6)';
+          isMinimized = false;
+          this.log('Catfish ad expanded by user');
+        }
+      });
+
+      toggleBtn.addEventListener('mouseenter', () => {
+        if (!isMinimized) {
+          toggleBtn.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+          toggleBtn.style.transform = 'scale(1.1)';
+        } else {
+          toggleBtn.style.backgroundColor = 'rgba(69, 183, 209, 1)';
+          toggleBtn.style.transform = 'scale(1.1)';
+        }
+      });
+
+      toggleBtn.addEventListener('mouseleave', () => {
+        toggleBtn.style.transform = 'scale(1)';
+        if (!isMinimized) {
+          toggleBtn.style.backgroundColor = 'rgba(0, 0, 0, 0.6)';
+        } else {
+          toggleBtn.style.backgroundColor = 'rgba(69, 183, 209, 0.8)';
+        }
+      });
+
+      container.style.position = 'relative';
+      container.appendChild(toggleBtn);
+      setTimeout(() => {
+        toggleBtn.style.display = 'flex';
+        toggleBtn.style.visibility = 'visible';
+        this.log('Toggle button visibility forced for:', container.id);
+      }, 100);
+
+      this.log('Toggle button added to container:', container.id);
+      this.log('Container children count:', container.children.length);
     }
 
     async loadAds() {
@@ -268,6 +454,7 @@
           throw new Error('Invalid ad data received');
         }
         this.log(`Ad data received:`, adData);
+        this.log(`Passing to renderAd:`, adData.ad);
 
         this.renderAd(containerId, adData.ad);
         this.loadedAds.set(containerId, adData);
@@ -294,27 +481,269 @@
 
     renderAd(containerId, adData) {
       const container = this.adContainers.get(containerId);
-      
+
       if (!container || !adData) {
         return;
       }
 
-      const adWrapper = document.createElement('div');
-      adWrapper.className = 'CoAd-ad-wrapper';
-      adWrapper.setAttribute('data-ad-id', adData.id);
-      adWrapper.setAttribute('data-ad-type', adData.type);
+      // Use dimensions from API response (which includes slot dimensions)
+      const width = adData.width || 300;
+      const height = adData.height || 250;
+      const slotType = adData.slotType || container.slotType || 'custom';
 
-      adWrapper.innerHTML = adData.content;
+      this.log(`Rendering ad for slot type: ${slotType}, dimensions: ${width}x${height}`);
+      this.log(`Ad data received:`, adData);
+      this.log(`Checking ad data properties:`, {
+        hasImageUrl: !!adData.imageUrl,
+        hasTitle: !!adData.title,
+        hasClickUrl: !!adData.clickUrl,
+        imageUrl: adData.imageUrl,
+        title: adData.title,
+        clickUrl: adData.clickUrl
+      });
 
-      adWrapper.addEventListener('click', () => {
-        this.trackAdClick(adData.id, containerId);
+      const iframe = this.createAdIframe(adData, width, height);
+      const adContent = this.createAdContent(adData, slotType, width, height);
+
+      iframe.addEventListener('load', () => {
+        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        iframeDoc.open();
+        iframeDoc.write(adContent);
+        iframeDoc.close();
+
+        // Add click tracking to iframe content
+        iframeDoc.addEventListener('click', () => {
+          this.trackAdClick(adData.id, containerId);
+        });
       });
 
       container.element.innerHTML = '';
-      container.element.appendChild(adWrapper);
+      container.element.appendChild(iframe);
+
+      // Add toggle button for catfish ads after rendering
+      if (slotType === 'catfish') {
+        this.log('Adding toggle button to catfish ad after rendering');
+        this.addCatfishToggleButton(container.element);
+      }
 
       // TODO: remove this logic, replace Ad impression with pixel tracking in ad's iframe
       this.trackAdImpression(adData.id, containerId);
+    }
+
+    addCatfishToggleButton(container) {
+      this.log('Creating catfish toggle button for container:', container.id);
+      let isMinimized = false;
+
+      const toggleBtn = document.createElement('button');
+      toggleBtn.innerHTML = '▼';
+      toggleBtn.className = 'CoAd-catfish-toggle-btn';
+      toggleBtn.style.cssText = `
+        position: absolute !important;
+        top: 8px !important;
+        left: 8px !important;
+        width: 32px !important;
+        height: 32px !important;
+        background: rgba(0, 0, 0, 0.8) !important;
+        color: white !important;
+        border: 2px solid rgba(255, 255, 255, 0.7) !important;
+        border-radius: 50% !important;
+        font-size: 14px !important;
+        font-weight: bold !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        cursor: pointer !important;
+        z-index: 100001 !important;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4) !important;
+        font-family: Arial, sans-serif !important;
+      `;
+
+      toggleBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (!isMinimized) {
+          // Minimize - hide the ad content but keep the button visible
+          const iframe = container.querySelector('iframe');
+          if (iframe) {
+            iframe.style.display = 'none';
+          }
+          container.style.height = '40px';
+          toggleBtn.innerHTML = '▲';
+          toggleBtn.style.background = 'rgba(69, 183, 209, 0.9)';
+          isMinimized = true;
+          this.log('Catfish ad minimized by user');
+        } else {
+          // Expand - show the ad content
+          const iframe = container.querySelector('iframe');
+          if (iframe) {
+            iframe.style.display = 'block';
+          }
+          container.style.height = 'auto';
+          toggleBtn.innerHTML = '▼';
+          toggleBtn.style.background = 'rgba(0, 0, 0, 0.8)';
+          isMinimized = false;
+          this.log('Catfish ad expanded by user');
+        }
+      });
+
+      toggleBtn.addEventListener('mouseenter', () => {
+        if (!isMinimized) {
+          toggleBtn.style.backgroundColor = 'rgba(0, 0, 0, 1)';
+        } else {
+          toggleBtn.style.backgroundColor = 'rgba(69, 183, 209, 1)';
+        }
+      });
+
+      toggleBtn.addEventListener('mouseleave', () => {
+        if (!isMinimized) {
+          toggleBtn.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+        } else {
+          toggleBtn.style.backgroundColor = 'rgba(69, 183, 209, 0.9)';
+        }
+      });
+
+      // Ensure container can hold positioned elements
+      container.style.position = 'relative';
+      container.appendChild(toggleBtn);
+
+      this.log('Catfish toggle button added successfully');
+    }
+
+    createAdIframe(adData, width, height) {
+      const iframe = document.createElement('iframe');
+      iframe.className = 'CoAd-ad-iframe';
+      iframe.setAttribute('data-ad-id', adData.id);
+      iframe.setAttribute('data-ad-type', adData.type || 'banner');
+      iframe.setAttribute('width', width.toString());
+      iframe.setAttribute('height', height.toString());
+      iframe.setAttribute('frameborder', '0');
+      iframe.setAttribute('scrolling', 'no');
+      iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox');
+      iframe.setAttribute('title', adData.title || 'Advertisement');
+      iframe.setAttribute('loading', 'lazy');
+
+      iframe.style.cssText = `
+        width: ${width}px;
+        height: ${height}px;
+        border: none;
+        display: block;
+        border-radius: 4px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        max-width: 100%;
+      `;
+
+      return iframe;
+    }
+
+    createAdContent(adData, slotType, width, height) {
+      return `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+            body {
+              width: ${width}px;
+              height: ${height}px;
+              overflow: hidden;
+              cursor: pointer;
+              position: relative;
+            }
+            .ad-container {
+              width: 100%;
+              height: 100%;
+              position: relative;
+              border-radius: 8px;
+              overflow: hidden;
+              box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            }
+            .ad-image {
+              width: 100%;
+              height: 100%;
+              object-fit: cover;
+              object-position: center;
+              display: block;
+            }
+            .ad-overlay {
+              position: absolute;
+              bottom: 0;
+              left: 0;
+              right: 0;
+              background: linear-gradient(transparent, rgba(0,0,0,0.7));
+              color: white;
+              padding: 8px 12px;
+              font-family: Arial, sans-serif;
+              font-size: 12px;
+              font-weight: bold;
+              text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            }
+            .ad-container:hover {
+              transform: scale(1.02);
+              transition: transform 0.2s ease;
+            }
+            .ad-info-icon {
+              position: absolute;
+              top: 6px;
+              right: 6px;
+              width: 22px;
+              height: 22px;
+              background: rgba(255, 255, 255, 0.95);
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-family: Arial, sans-serif;
+              font-size: 13px;
+              font-weight: bold;
+              color: #333;
+              cursor: pointer;
+              z-index: 9999;
+              transition: all 0.2s ease;
+              border: 2px solid rgba(0,0,0,0.2);
+              box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+            }
+            .ad-info-icon:hover {
+              background: white;
+              transform: scale(1.1);
+              box-shadow: 0 3px 8px rgba(0,0,0,0.5);
+            }
+          </style>
+        </head>
+        <body onclick="handleAdClick(event)">
+          <div class="ad-container">
+            <img src="${adData.imageUrl}" alt="${adData.title}" class="ad-image">
+            <div class="ad-overlay">${adData.title}</div>
+            <div class="ad-info-icon" onclick="toggleInfo(event)">i</div>
+          </div>
+
+          <script>
+            function toggleInfo(event) {
+              event.stopPropagation();
+              alert('Advertisement by CoAd\\n\\nThis ad helps support the website you\\'re visiting.');
+            }
+
+            function handleAdClick(event) {
+              if (event.target.closest('.ad-info-icon')) {
+                return;
+              }
+              window.open('${adData.clickUrl}', '_blank');
+            }
+          </script>
+        </body>
+        </html>
+      `;
+    }
+
+
+
+    showAdInfo() {
+      alert('Advertisement by CoAd\n\nThis ad helps support the website you\'re visiting. Click here to provide feedback about this ad.');
     }
 
     trackAdImpression(adId, containerId) {
@@ -461,12 +890,67 @@
           100% { opacity: 1; }
         }
 
+        /* Catfish ad specific styles */
+        .CoAd-catfish {
+          position: fixed !important;
+          bottom: 0 !important;
+          left: 50% !important;
+          transform: translateX(-50%) !important;
+          z-index: 99999 !important;
+          margin: 0 !important;
+          box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2) !important;
+          background-color: #ffffff !important;
+          border: 1px solid #e0e0e0 !important;
+          border-bottom: none !important;
+          border-radius: 8px 8px 0 0 !important;
+          max-width: 90vw !important;
+          transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease !important;
+        }
+
+        .CoAd-catfish .CoAd-ad-wrapper {
+          box-shadow: none !important;
+          border-radius: 0 !important;
+        }
+
+        .CoAd-catfish .CoAd-ad-wrapper:hover {
+          transform: none !important;
+        }
+
+        .CoAd-toggle-btn {
+          position: absolute !important;
+          top: 8px !important;
+          right: 8px !important;
+          width: 28px !important;
+          height: 28px !important;
+          background: rgba(0, 0, 0, 0.6) !important;
+          color: white !important;
+          border: 2px solid rgba(255, 255, 255, 0.3) !important;
+          border-radius: 50% !important;
+          font-size: 12px !important;
+          font-weight: bold !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          cursor: pointer !important;
+          z-index: 100000 !important;
+          transition: all 0.3s ease !important;
+        }
+
+        .CoAd-toggle-btn:hover {
+          transform: scale(1.1) !important;
+        }
+
         @media (max-width: 768px) {
           .CoAd-ad-container {
             margin: 15px 0;
           }
-        }
 
+          .CoAd-catfish {
+            max-width: 95vw !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+          }
+        }
 
       `;
 

@@ -1084,12 +1084,8 @@
 /* Website Management Styles */
 .website-management {
   background: white;
-  height: calc(100vh - 200px);
-  min-height: 600px;
-  max-height: calc(100vh - 200px);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
 }
 
 .website-management h2 {
@@ -1109,8 +1105,6 @@
   display: grid;
   grid-template-columns: 350px 1fr;
   gap: 2rem;
-  flex: 1;
-  min-height: 0;
 }
 
 /* Left Column - Websites */
@@ -1119,8 +1113,6 @@
   flex-direction: column;
   border-right: 1px solid #e5e7eb;
   padding-right: 2rem;
-  min-height: 0;
-  overflow: hidden;
 }
 
 .column-header {
@@ -1144,73 +1136,25 @@
 }
 
 .websites-list {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 0;
-  overflow: hidden;
   position: relative;
 }
 
-/* Fade effect at bottom when scrollable */
-.websites-list::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 20px;
-  background: linear-gradient(transparent, rgba(255, 255, 255, 0.8));
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
 
-.websites-list.has-scroll::after {
-  opacity: 1;
-}
 
 .websites-items {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-  padding-right: 0.5rem;
-  margin-right: -0.5rem;
 }
 
-/* Custom scrollbar for websites list */
-.websites-items::-webkit-scrollbar {
-  width: 6px;
-}
 
-.websites-items::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 3px;
-}
-
-.websites-items::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 3px;
-}
-
-.websites-items::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
-}
-
-/* Firefox scrollbar */
-.websites-items {
-  scrollbar-width: thin;
-  scrollbar-color: #c1c1c1 #f1f1f1;
-}
 
 /* Right Column - Placements */
 .placements-column {
   display: flex;
   flex-direction: column;
-  min-height: 0;
 }
 
 .no-selection {
@@ -1410,10 +1354,8 @@
 
 /* Ad Placement Manager Styles */
 .ad-placement-manager {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 0;
 }
 
 .manager-header {
@@ -1497,10 +1439,8 @@
 }
 
 .placements-list-section {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 0;
 }
 
 .placements-list-section h4 {
@@ -1508,7 +1448,6 @@
   color: #333;
   font-size: 1.1rem;
   font-weight: 600;
-  flex-shrink: 0;
 }
 
 .empty-placements {
@@ -1525,8 +1464,6 @@
 }
 
 .placements-list {
-  flex: 1;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -1976,5 +1913,162 @@
 
   .modal-body .result-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Modal Styles for Slot Selection */
+.slot-selection-modal,
+.slot-assignment-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.slot-selection-modal .modal-content,
+.slot-assignment-modal .modal-content {
+  background: white;
+  border-radius: 8px;
+  max-width: 800px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.slot-selection-modal .modal-header,
+.slot-assignment-modal .modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.slot-selection-modal .modal-header h3,
+.slot-assignment-modal .modal-header h3 {
+  margin: 0;
+  color: #2c3e50;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5em;
+  cursor: pointer;
+  color: #6c757d;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.15s ease;
+}
+
+.close-btn:hover {
+  background: #f8f9fa;
+  color: #495057;
+}
+
+.slot-selection-modal .modal-actions,
+.slot-assignment-modal .modal-actions {
+  padding: 20px 24px;
+  border-top: 1px solid #e9ecef;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+/* Updated placement options layout */
+.placement-options {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.slot-btn {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 1em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  min-width: 200px;
+}
+
+.slot-btn:hover {
+  background: #0056b3;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+}
+
+/* Placement Preview List Styles */
+.placements-preview-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.placement-preview-item {
+  position: relative;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.placement-preview-item:hover {
+  transform: translateY(-2px);
+}
+
+.remove-placement-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(220, 53, 69, 0.2);
+  z-index: 10;
+}
+
+.remove-placement-btn:hover {
+  background: #c82333;
+  transform: scale(1.05);
+  box-shadow: 0 3px 6px rgba(220, 53, 69, 0.3);
+}
+
+.remove-placement-btn:active {
+  transform: scale(0.95);
+}
+
+
+
+/* Responsive adjustments for placement previews */
+@media (max-width: 768px) {
+  .remove-placement-btn {
+    position: static;
+    margin-top: 8px;
+    align-self: flex-end;
+  }
+
+  .placement-preview-item {
+    margin-bottom: 8px;
   }
 }

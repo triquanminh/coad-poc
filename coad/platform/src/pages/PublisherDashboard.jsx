@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import SlotSelector from '../components/SlotSelector'
+import SlotSelectorAssignment from '../components/SlotSelectorAssignment'
+import PlacementPreview from '../components/PlacementPreview'
 import './PublisherDashboard.css'
 
 // SDK Health Check Component
@@ -905,10 +908,12 @@ function WebsiteListItem({ website, isSelected, onSelect }) {
 
 // Ad Placement Manager Component
 function AdPlacementManager({ website, selectedPlacements, setSelectedPlacements, onDeleteWebsite }) {
-  const [customSelector, setCustomSelector] = useState('')
   const [placements, setPlacements] = useState([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showSlotSelector, setShowSlotSelector] = useState(false)
+  const [selectedSlots, setSelectedSlots] = useState([])
+  const [showSlotAssignment, setShowSlotAssignment] = useState(false)
 
   useEffect(() => {
     loadPlacements()
@@ -939,46 +944,32 @@ function AdPlacementManager({ website, selectedPlacements, setSelectedPlacements
     }
   }
 
-  const handleAddSelector = () => {
-    if (!customSelector.trim()) return
-
-    // Check if selector already exists
-    if (placements.some(p => p.selector === customSelector.trim())) {
-      alert('This selector already exists!')
-      return
-    }
-
-    const newPlacement = {
-      selector: customSelector.trim(),
-      description: `Ad placement for ${customSelector.trim()}`,
-      priority: 'medium'
-    }
-
-    const updatedPlacements = [...placements, newPlacement]
-    setPlacements(updatedPlacements)
-    setSelectedPlacements(updatedPlacements)
-    setCustomSelector('')
-
-    // Save immediately
-    savePlacement(newPlacement)
+  const handleAddSlots = () => {
+    setShowSlotSelector(true)
+    setSelectedSlots([])
   }
 
-  const savePlacement = async (placement) => {
-    try {
-      const publisherId = website.publisherId || website.publisher_id
-      if (!publisherId) {
-        throw new Error('No publisher ID found in website object')
-      }
-
-      await axios.post(`http://localhost:8080/api/publisher/${publisherId}/placements`, {
-        selector: placement.selector,
-        description: placement.description,
-        priority: placement.priority
-      })
-    } catch (err) {
-      console.error('Failed to save placement:', err)
-      setError('Failed to save placement')
+  const handleSlotsSelected = (slots) => {
+    console.log('handleSlotsSelected called with:', slots)
+    setSelectedSlots(slots)
+    if (slots.length > 0) {
+      setShowSlotAssignment(true)
+      setShowSlotSelector(false)
     }
+  }
+
+  const handleSlotPlacementsCreated = (newPlacements) => {
+    setPlacements(prev => [...prev, ...newPlacements])
+    setSelectedPlacements(prev => [...prev, ...newPlacements])
+    setShowSlotAssignment(false)
+    setShowSlotSelector(false)
+    setSelectedSlots([])
+  }
+
+  const handleCancelSlotSelection = () => {
+    setShowSlotSelector(false)
+    setShowSlotAssignment(false)
+    setSelectedSlots([])
   }
 
   const removePlacement = async (selector) => {
@@ -1005,11 +996,7 @@ function AdPlacementManager({ website, selectedPlacements, setSelectedPlacements
     }
   }
 
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      handleAddSelector()
-    }
-  }
+
 
   return (
     <div className="ad-placement-manager">
@@ -1030,23 +1017,63 @@ function AdPlacementManager({ website, selectedPlacements, setSelectedPlacements
 
       {error && <div className="error-message">{error}</div>}
 
+      {showSlotSelector && (
+        <div className="slot-selection-modal">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3>Select Ad Slot Types</h3>
+              <button onClick={handleCancelSlotSelection} className="close-btn">×</button>
+            </div>
+            <SlotSelector
+              onSlotsSelected={handleSlotsSelected}
+              selectedSlots={selectedSlots}
+            />
+            <div className="modal-actions">
+              <button onClick={handleCancelSlotSelection} className="btn btn-secondary">
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  console.log('Continue button clicked with slots:', selectedSlots);
+                  if (selectedSlots.length > 0) {
+                    setShowSlotAssignment(true);
+                    setShowSlotSelector(false);
+                  }
+                }}
+                disabled={selectedSlots.length === 0}
+                className="btn btn-primary"
+              >
+                Continue with {selectedSlots.length} slots
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSlotAssignment && (
+        <div className="slot-assignment-modal">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3>Assign CSS Selectors</h3>
+              <button onClick={handleCancelSlotSelection} className="close-btn">×</button>
+            </div>
+            <SlotSelectorAssignment
+              website={website}
+              selectedSlots={selectedSlots}
+              onPlacementsCreated={handleSlotPlacementsCreated}
+            />
+          </div>
+        </div>
+      )}
+
       <div className="add-selector-section">
-        <h4>Add New Placement</h4>
-        <div className="add-selector-form">
-          <input
-            type="text"
-            value={customSelector}
-            onChange={(e) => setCustomSelector(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Enter CSS selector (e.g., .header, #sidebar, .content)"
-            className="selector-input"
-          />
+        <h4>Add Ad Placements</h4>
+        <div className="placement-options">
           <button
-            onClick={handleAddSelector}
-            disabled={!customSelector.trim()}
-            className="btn btn-primary"
+            onClick={handleAddSlots}
+            className="btn btn-primary slot-btn"
           >
-            ➕ Add Selector
+            📍 Select Ad Slot Types
           </button>
         </div>
       </div>
@@ -1061,19 +1088,16 @@ function AdPlacementManager({ website, selectedPlacements, setSelectedPlacements
             <p>Add CSS selectors above to specify where ads should appear on your website.</p>
           </div>
         ) : (
-          <div className="placements-list">
+          <div className="placements-preview-list">
             {placements.map((placement, index) => (
-              <div key={index} className="placement-item">
-                <div className="placement-info">
-                  <code className="placement-selector">{placement.selector}</code>
-                  <span className="placement-description">{placement.description}</span>
-                </div>
+              <div key={index} className="placement-preview-item">
+                <PlacementPreview placement={placement} showDetails={true} />
                 <button
                   onClick={() => removePlacement(placement.selector)}
-                  className="remove-btn"
+                  className="remove-placement-btn"
                   title="Remove placement"
                 >
-                  ×
+                  🗑️ Remove
                 </button>
               </div>
             ))}

@@ -296,10 +296,51 @@ app.delete('/api/publisher/:publisherId', async (req, res) => {
   }
 })
 
+// Predefined slot configurations
+const PREDEFINED_SLOTS = {
+  top: {
+    name: 'Top Banner',
+    width: 800,
+    height: 150,
+    positionType: 'relative',
+    isDismissible: false,
+    description: 'Horizontal banner at the top of the page'
+  },
+  sidebar: {
+    name: 'Sidebar',
+    width: 150,
+    height: 800,
+    positionType: 'relative',
+    isDismissible: false,
+    description: 'Vertical ad in the sidebar'
+  },
+  catfish: {
+    name: 'Catfish',
+    width: 800,
+    height: 150,
+    positionType: 'fixed',
+    isDismissible: true,
+    description: 'Horizontal banner that stays at the bottom of the screen'
+  },
+  logo: {
+    name: 'Logo',
+    width: 150,
+    height: 150,
+    positionType: 'relative',
+    isDismissible: false,
+    description: 'Square logo placement'
+  }
+}
+
+// Get predefined slot configurations
+app.get('/api/slots', (req, res) => {
+  res.json(PREDEFINED_SLOTS)
+})
+
 // Add ad placement for a publisher
 app.post('/api/publisher/:publisherId/placements', async (req, res) => {
   const { publisherId } = req.params
-  const { selector, description, priority } = req.body
+  const { selector, description, priority, slotType } = req.body
 
   if (!selector) {
     return res.status(400).json({ error: 'Selector is required' })
@@ -312,13 +353,27 @@ app.post('/api/publisher/:publisherId/placements', async (req, res) => {
       return res.status(404).json({ error: 'Publisher not found' })
     }
 
+    // Get slot configuration if slotType is provided
+    let slotConfig = {}
+    if (slotType && PREDEFINED_SLOTS[slotType]) {
+      const slot = PREDEFINED_SLOTS[slotType]
+      slotConfig = {
+        slotType,
+        width: slot.width,
+        height: slot.height,
+        positionType: slot.positionType,
+        isDismissible: slot.isDismissible
+      }
+    }
+
     const placement = await db.addAdPlacement(website.id, {
       selector,
-      description,
-      priority
+      description: description || (slotType ? PREDEFINED_SLOTS[slotType].description : `Ad placement for ${selector}`),
+      priority: priority || 'medium',
+      ...slotConfig
     })
 
-    console.log(`Ad placement added: ${selector} for publisher ${publisherId}`)
+    console.log(`Ad placement added: ${selector} for publisher ${publisherId} (slot: ${slotType || 'custom'})`)
     res.json(placement)
   } catch (error) {
     console.error('Error adding ad placement:', error.message)
@@ -557,237 +612,59 @@ app.get('/api/ads', async (req, res) => {
     const adBanners = [
       {
         imageUrl: 'https://img.freepik.com/free-vector/beautiful-cosmetic-ad_23-2148471068.jpg?semt=ais_hybrid&w=740',
-        width: '400',
-        height: '300',
         title: 'Top 1% perfume',
         clickUrl: 'https://oseff.com?ads=perfume'
       },
       {
         imageUrl: 'https://marketplace.canva.com/EAGcEvo0NCs/1/0/1131w/canva-yellow-and-black-burger-promotional-poster-zO5UenmZ_fg.jpg',
-        width: '500',
-        height: '800',
         title: 'The best of the burger',
         clickUrl: 'https://oseff.com?ads=burger'
       },
       {
         imageUrl: 'https://d3jmn01ri1fzgl.cloudfront.net/photoadking/webp_thumbnail/sky-blue-special-offer-end-of-season-advertisement-template-mhj19nd2e69bf2.webp',
-        width: '400',
-        height: '400',
         title: 'End of season sale',
         clickUrl: 'https://oseff.com?ads=season-sale'
       },
       {
         imageUrl: 'https://c8.alamy.com/comp/P6BF1C/summer-sale-with-paper-cut-symbol-and-icon-for-advertising-beach-background-art-and-craft-style-use-for-ads-banner-poster-card-cover-stickers-P6BF1C.jpg',
-        width: '600',
-        height: '400',
         title: 'Summer Sale',
         clickUrl: 'https://oseff.com?ads=summer-sale'
       },
       {
         imageUrl: 'https://assets.entrepreneur.com/content/3x2/2000/1593193401-fairandlovelyedited.jpg',
-        width: '1000',
-        height: '800',
         title: 'Your skins must be glowing',
         clickUrl: 'https://oseff.com?ads=skin-care'
       }
     ];
 
+    // Get placement details to determine slot dimensions
+    const placementDetails = await db.getAdPlacementsByPublisherId(publisherId);
+    const currentPlacement = placementDetails.find(p => p.selector === placement);
+
+    // Use slot dimensions if available, otherwise use defaults
+    let adWidth = 300;
+    let adHeight = 250;
+
+    if (currentPlacement && currentPlacement.width && currentPlacement.height) {
+      adWidth = currentPlacement.width;
+      adHeight = currentPlacement.height;
+    }
+
+    console.log(`Serving ad for placement: ${placement}, slot dimensions: ${adWidth}x${adHeight}, slot type: ${currentPlacement?.slot_type || 'custom'}`);
+
     // Select a random ad banner
     const selectedAd = adBanners[Math.floor(Math.random() * adBanners.length)];
 
-    // Create HTML content for the iframe with proper image containment
-    const adHtmlContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-          * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-          }
-          body {
-            width: ${selectedAd.width}px;
-            height: ${selectedAd.height}px;
-            overflow: hidden;
-            cursor: pointer;
-            position: relative;
-          }
-          .ad-container {
-            width: 100%;
-            height: 100%;
-            position: relative;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-          }
-          .ad-image {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            object-position: center;
-            display: block;
-          }
-          .ad-overlay {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: linear-gradient(transparent, rgba(0,0,0,0.7));
-            color: white;
-            padding: 8px 12px;
-            font-family: Arial, sans-serif;
-            font-size: 12px;
-            font-weight: bold;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-          }
-          .ad-container:hover {
-            transform: scale(1.02);
-            transition: transform 0.2s ease;
-          }
-          .ad-info-icon {
-            position: absolute;
-            top: 6px;
-            right: 6px;
-            width: 22px;
-            height: 22px;
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: Arial, sans-serif;
-            font-size: 13px;
-            font-weight: bold;
-            color: #333;
-            cursor: pointer;
-            z-index: 9999;
-            transition: all 0.2s ease;
-            border: 2px solid rgba(0,0,0,0.2);
-            box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-          }
-          .ad-info-icon:hover {
-            background: white;
-            transform: scale(1.1);
-            box-shadow: 0 3px 8px rgba(0,0,0,0.5);
-          }
-          .ad-info-popup {
-            position: absolute;
-            top: 30px;
-            right: 6px;
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 12px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.25);
-            font-family: Arial, sans-serif;
-            font-size: 11px;
-            color: #333;
-            z-index: 10000;
-            min-width: 150px;
-            display: none;
-          }
-          .ad-info-popup.show {
-            display: block;
-            animation: fadeIn 0.2s ease;
-          }
-          @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-5px); }
-            to { opacity: 1; transform: translateY(0); }
-          }
-          .ad-info-text {
-            margin-bottom: 8px;
-            font-weight: 500;
-          }
-          .feedback-button {
-            background: #007bff;
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
-            font-size: 10px;
-            cursor: pointer;
-            width: 100%;
-            transition: background 0.2s ease;
-          }
-          .feedback-button:hover {
-            background: #0056b3;
-          }
-        </style>
-      </head>
-      <body onclick="handleAdClick(event)">
-        <div class="ad-container">
-          <img src="${selectedAd.imageUrl}" alt="${selectedAd.title}" class="ad-image">
-          <div class="ad-overlay">${selectedAd.title}</div>
-          <div class="ad-info-icon" onclick="toggleInfo(event)">i</div>
-          <div class="ad-info-popup" id="infoPopup">
-            <div class="ad-info-text">Advertisement by CoAd</div>
-            <button class="feedback-button" onclick="sendFeedback(event)">Send Feedback</button>
-          </div>
-        </div>
-
-        <script>
-          function toggleInfo(event) {
-            event.stopPropagation();
-            const popup = document.getElementById('infoPopup');
-            popup.classList.toggle('show');
-          }
-
-          function sendFeedback(event) {
-            event.stopPropagation();
-            // Open feedback form in new window
-            window.open('mailto:feedback@coad.com?subject=Ad Feedback&body=Please provide your feedback about this advertisement:', '_blank');
-          }
-
-          function handleAdClick(event) {
-            // Don't open ad if clicking on info icon or popup
-            if (event.target.closest('.ad-info-icon') || event.target.closest('.ad-info-popup')) {
-              return;
-            }
-            window.open('${selectedAd.clickUrl}', '_blank');
-          }
-
-          // Close popup when clicking outside
-          document.addEventListener('click', function(event) {
-            const popup = document.getElementById('infoPopup');
-            const icon = document.querySelector('.ad-info-icon');
-            if (!icon.contains(event.target) && !popup.contains(event.target)) {
-              popup.classList.remove('show');
-            }
-          });
-        </script>
-      </body>
-      </html>
-    `;
-
-    // Create data URL for the iframe
-    const dataUrl = 'data:text/html;charset=utf-8,' + encodeURIComponent(adHtmlContent);
-
+    // Return clean ad data - let SDK handle iframe creation
     const mockAd = {
       id: `ad_${Date.now()}`,
       type: 'banner',
-      content: `<iframe
-        src="${dataUrl}"
-        width="${selectedAd.width}"
-        height="${selectedAd.height}"
-        frameborder="0"
-        scrolling="no"
-        style="
-          border: none;
-          border-radius: 8px;
-          margin: 0;
-          box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-          max-width: 100%;
-          display: block;
-        "
-        sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
-        title="${selectedAd.title}"
-        loading="lazy">
-      </iframe>`,
-      width: selectedAd.width,
-      height: selectedAd.height
+      imageUrl: selectedAd.imageUrl,
+      title: selectedAd.title,
+      clickUrl: selectedAd.clickUrl,
+      slotType: currentPlacement?.slot_type || 'custom',
+      width: adWidth,
+      height: adHeight
     }
 
     console.log(`[AD SERVED] Successfully served ad ${mockAd.id} to ${publisherId}`)

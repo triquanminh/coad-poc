@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Slot Selector</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        .slot-card {
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .slot-card:hover {
+            border-color: #007bff;
+            box-shadow: 0 2px 8px rgba(0, 123, 255, 0.15);
+        }
+        .slot-card.selected {
+            border-color: #007bff;
+            background: #f0f8ff;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Slot Selector</h1>
+    <div id="slots-container"></div>
+    <div id="selected-slots"></div>
+
+    <script>
+        const slots = {
+            top: { name: 'Top Banner', width: 800, height: 150 },
+            sidebar: { name: 'Sidebar', width: 150, height: 800 },
+            catfish: { name: 'Catfish', width: 800, height: 150 },
+            logo: { name: 'Logo', width: 150, height: 150 }
+        };
+
+        let selectedSlots = [];
+
+        function renderSlots() {
+            const container = document.getElementById('slots-container');
+            container.innerHTML = '';
+
+            Object.entries(slots).forEach(([slotType, slot]) => {
+                const card = document.createElement('div');
+                card.className = `slot-card ${selectedSlots.includes(slotType) ? 'selected' : ''}`;
+                card.innerHTML = `
+                    <h3>${slot.name}</h3>
+                    <p>${slot.width} × ${slot.height}px</p>
+                `;
+                card.addEventListener('click', () => {
+                    console.log('Clicked slot:', slotType);
+                    toggleSlot(slotType);
+                });
+                container.appendChild(card);
+            });
+
+            updateSelectedDisplay();
+        }
+
+        function toggleSlot(slotType) {
+            if (selectedSlots.includes(slotType)) {
+                selectedSlots = selectedSlots.filter(s => s !== slotType);
+            } else {
+                selectedSlots.push(slotType);
+            }
+            console.log('Selected slots:', selectedSlots);
+            renderSlots();
+        }
+
+        function updateSelectedDisplay() {
+            const display = document.getElementById('selected-slots');
+            display.innerHTML = `<h3>Selected: ${selectedSlots.join(', ')}</h3>`;
+        }
+
+        // Initialize
+        renderSlots();
+    </script>
+</body>
+</html>
