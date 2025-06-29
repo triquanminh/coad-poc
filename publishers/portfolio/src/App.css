@@ -55,6 +55,11 @@ body {
   font-weight: 700;
 }
 
+.nav-logo a {
+  text-decoration: none;
+  color: inherit;
+}
+
 .nav-menu {
   display: flex;
   gap: 2rem;
@@ -84,8 +89,13 @@ body {
   transition: width 0.3s ease;
 }
 
-.nav-link:hover::after {
+.nav-link:hover::after,
+.nav-link.active::after {
   width: 100%;
+}
+
+.nav-link.active {
+  color: #2563eb;
 }
 
 .nav-toggle {
@@ -611,6 +621,101 @@ body {
   .hero-subtitle {
     font-size: 1.2rem;
   }
+}
+
+/* About Page Specific Styles */
+.about-page {
+  padding-top: 100px;
+}
+
+.experience-section,
+.education-section {
+  margin-top: 4rem;
+}
+
+.timeline {
+  position: relative;
+  padding-left: 2rem;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #2563eb;
+}
+
+.timeline-item {
+  position: relative;
+  margin-bottom: 2rem;
+  padding-left: 2rem;
+}
+
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 0;
+  width: 12px;
+  height: 12px;
+  background: #2563eb;
+  border-radius: 50%;
+}
+
+.timeline-date {
+  color: #2563eb;
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.timeline-content h3 {
+  color: #333;
+  margin-bottom: 0.25rem;
+}
+
+.timeline-content h4 {
+  color: #666;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.timeline-content p {
+  color: #666;
+  line-height: 1.6;
+}
+
+.education-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+.education-item {
+  background: #f8fafc;
+  padding: 2rem;
+  border-radius: 12px;
+  border-left: 4px solid #2563eb;
+}
+
+.education-item h3 {
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+
+.education-item h4 {
+  color: #2563eb;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.education-item p {
+  color: #666;
+}
 
   .section-title {
     font-size: 2rem;

@@ -10,50 +10,18 @@ app.use((req, res, next) => {
   next();
 });
 
-// Serve static files from landing-page directory for root routes
-app.use('/landing-page', express.static(path.join(__dirname, 'landing-page')));
+// Serve static files from assets directory
+app.use('/assets', express.static(path.join(__dirname, 'assets')));
 
-// Route: Main landing page at root
-app.get('/', (req, res) => {
+// SPA Route: Serve index.html for all routes (client-side routing)
+app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-// Route: Simple policy subpages
-app.get('/user-agreement', (req, res) => {
-  res.sendFile(path.join(__dirname, 'user-agreement.html'));
-});
-
-app.get('/privacy-policy', (req, res) => {
-  res.sendFile(path.join(__dirname, 'privacy-policy.html'));
-});
-
-app.get('/application-rules', (req, res) => {
-  res.sendFile(path.join(__dirname, 'application-rules.html'));
-});
-
-app.get('/cookie-policy', (req, res) => {
-  res.sendFile(path.join(__dirname, 'cookie-policy.html'));
-});
-
-// 404 handler
-app.use((req, res) => {
-  res.status(404).send(`
-    <h1>404 - Page Not Found</h1>
-    <p>Available routes:</p>
-    <ul>
-      <li><a href="/">Home Page (localhost:3001/)</a></li>
-      <li><a href="/user-agreement">User Agreement</a></li>
-      <li><a href="/privacy-policy">Privacy Policy</a></li>
-      <li><a href="/application-rules">Application Rules</a></li>
-      <li><a href="/cookie-policy">Cookie Policy</a></li>
-    </ul>
-  `);
 });
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 MyNewOne Publisher Website running on http://localhost:${PORT}`);
-  console.log('📍 Available routes:');
+  console.log(`🚀 MyNewOne Publisher Website (SPA) running on http://localhost:${PORT}`);
+  console.log('📍 Available routes (client-side routing):');
   console.log(`   Home Page:        http://localhost:${PORT}/`);
   console.log(`   User Agreement:   http://localhost:${PORT}/user-agreement`);
   console.log(`   Privacy Policy:   http://localhost:${PORT}/privacy-policy`);
@@ -61,7 +29,8 @@ app.listen(PORT, () => {
   console.log(`   Cookie Policy:    http://localhost:${PORT}/cookie-policy`);
   console.log('');
   console.log('💡 Ready for COAD AdSDK integration!');
-  console.log('🎯 Script injection: Only on main page (/) - applies to all subpages');
+  console.log('🎯 SPA Mode: Script injected once in index.html - persists across all navigation');
+  console.log('🔄 Client-side routing: All routes serve the same index.html with JavaScript navigation');
 });
 
 // Graceful shutdown

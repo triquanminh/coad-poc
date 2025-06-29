@@ -5,16 +5,109 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta charset="utf-8" />
     <title>Mynewone</title>
-    <link rel="stylesheet" href="./landing-page/assets/css/style.css" />
+    <link rel="stylesheet" href="./assets/css/style.css" />
     <script src="http://localhost:4001/coad-tag.dev.js" async></script>
+    <style>
+        /* Policy page styles */
+        .policy-container {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+            min-height: 100vh;
+        }
+        .policy-content {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .policy-content h1 {
+            color: #333;
+            border-bottom: 3px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .policy-content h2 {
+            color: #555;
+            margin-top: 30px;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #007bff;
+            text-decoration: none;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .update-info {
+            color: #666;
+            font-style: italic;
+            margin-bottom: 30px;
+        }
+        .policy-content ul {
+            padding-left: 20px;
+        }
+        .policy-content li {
+            margin-bottom: 8px;
+        }
+        .policy-content a {
+            color: #007bff;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .policy-content a:hover {
+            text-decoration: underline;
+        }
+        .rule-section {
+            background-color: #f8f9fa;
+            padding: 15px;
+            margin: 20px 0;
+            border-left: 4px solid #007bff;
+            border-radius: 5px;
+        }
+        .cookie-type {
+            background-color: #f8f9fa;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        .policy-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .policy-content th, .policy-content td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        .policy-content th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
 </head>
 
 <body>
-    <div class="container">
+    <div id="app">
+        <!-- Main landing page content -->
+        <div id="home-page" class="page">
+            <div class="container">
         <!-- Navigation Menu -->
         <header class="header">
             <div class="logo">
-                <img src="./landing-page/assets/images/MyNewOne.png" alt="Logo" />
+                <img src="./assets/images/MyNewOne.png" alt="Logo" />
             </div>
             <nav class="menu">
                 <div class="menu-item">Home</div>
@@ -33,7 +126,7 @@
         </header>
         <!-- World and Voice Section Combined -->
         <section class="world-voice-section">
-            <img src="./landing-page/assets/images/BannerWorldVoiceSection.png" />
+            <img src="./assets/images/BannerWorldVoiceSection.png" />
         </section>
 
 
@@ -55,7 +148,7 @@
                 </div>
                 <div class="download-options">
                     <div class="download-option download-option-google">
-                        <img src="./landing-page/assets/images/googleplay.svg" alt="Google Play" />
+                        <img src="./assets/images/googleplay.svg" alt="Google Play" />
                         <div>Google Play</div>
                     </div>
                     <div class="download-option download-option-apk">
@@ -67,7 +160,7 @@
                         <div>Applestore</div>
                     </div>
                     <div class="download-option download-option-ipa">
-                        <img src="./landing-page/assets/images/IPA.svg" alt="IPA" />
+                        <img src="./assets/images/IPA.svg" alt="IPA" />
                         <div>.IPA</div>
                     </div>
                 </div>
@@ -127,7 +220,7 @@
         <!-- Hero Section -->
         <section class="hero" id="hero">
             <div class="hero-image">
-                <img src="./landing-page/assets/images/HeroImage.png" alt="Hero" />
+                <img src="./assets/images/HeroImage.png" alt="Hero" />
             </div>
             <div class="hero-content">
                 <h1 class="hero-title" data-i18n data-en="How does Mynewone work?"
@@ -179,14 +272,14 @@
                     </p>
                 </div>
                 <div class="feature-example post">
-                    <img src="./landing-page/assets/images/PostImage.png" alt="Post Image" />
+                    <img src="./assets/images/PostImage.png" alt="Post Image" />
                 </div>
             </div>
 
             <!-- Poll Feature -->
             <div class="feature-card poll-card">
                 <div class="feature-example post">
-                    <img src="./landing-page/assets/images/CommentImage.png" alt="Poll" />
+                    <img src="./assets/images/CommentImage.png" alt="Poll" />
                 </div>
                 <div class="feature-content">
                     <h3 class="feature-name comment" data-i18n data-en="COMMENT" data-vn="BÌNH LUẬN" data-th="คอมเมนต์">
@@ -221,7 +314,7 @@
                     </p>
                 </div>
                 <div class="feature-example">
-                    <img src="./landing-page/assets/images/PollImage.png" alt="Comment" />
+                    <img src="./assets/images/PollImage.png" alt="Comment" />
                 </div>
             </div>
         </section>
@@ -254,21 +347,21 @@
         <section class="values-section">
             <div class="value-card">
                 <div class="value-icon value-icon-1">
-                    <img src="./landing-page/assets/images/value1.svg" alt="Layer" />
+                    <img src="./assets/images/value1.svg" alt="Layer" />
                 </div>
                 <h3 class="value-title">Value 1</h3>
                 <p class="value-description">Lorem ipsum dolor sit amet, consectetur adipiscing elit,</p>
             </div>
             <div class="value-card">
                 <div class="value-icon value-icon-2">
-                    <img src="./landing-page/assets/images/value2.svg" alt="Statistic" />
+                    <img src="./assets/images/value2.svg" alt="Statistic" />
                 </div>
                 <h3 class="value-title">Value 2</h3>
                 <p class="value-description">Lorem ipsum dolor sit amet, consectetur adipiscing elit,</p>
             </div>
             <div class="value-card">
                 <div class="value-icon value-icon-3">
-                    <img src="./landing-page/assets/images/value3.svg" alt="Website" />
+                    <img src="./assets/images/value3.svg" alt="Website" />
                 </div>
                 <h3 class="value-title">Value 3</h3>
                 <p class="value-description">Lorem ipsum dolor sit amet, consectetur adipiscing elit,</p>
@@ -277,7 +370,7 @@
 
         <!-- Quote Section -->
         <section class="quote-section">
-            <img src="./landing-page/assets/images/Quote.png" alt="Quote" class="quote-image">
+            <img src="./assets/images/Quote.png" alt="Quote" class="quote-image">
         </section>
 
         <!-- Testimonial Section -->
@@ -315,15 +408,15 @@
 
                     <div class="contact-info">
                         <div class="info-item">
-                            <img src="./landing-page/assets/images/address.svg" alt="Address" />
+                            <img src="./assets/images/address.svg" alt="Address" />
                             <p>123 Phan Dang Luu Street, Ward 1, Phu Nhuan District, Ho Chi Minh City</p>
                         </div>
                         <div class="info-item">
-                            <img src="./landing-page/assets/images/mail.svg" alt="Email" />
+                            <img src="./assets/images/mail.svg" alt="Email" />
                             <p>info.mynewone@gmail.com</p>
                         </div>
                         <div class="info-item">
-                            <img src="./landing-page/assets/images/phone.svg" alt="Phone" />
+                            <img src="./assets/images/phone.svg" alt="Phone" />
                             <p>(+84) 987 654 321</p>
                         </div>
                     </div>
@@ -403,7 +496,7 @@
         <footer class="footer">
             <div class="footer-top">
                 <div class="footer-logo">
-                    <img src="./landing-page/assets/images/MyNewOne.png" alt="Logo2" />
+                    <img src="./assets/images/MyNewOne.png" alt="Logo2" />
                     <h3>WE'RE ALWAYS<br />IN TOUCH</h3>
 
                 </div>
@@ -411,23 +504,23 @@
                     <h4 data-i18n data-en="Legal Information" data-vn="Thông tin pháp luật" data-th="ข้อมูลกฎหมาย">Legal
                         Information</h4>
                     <ul>
-                        <a href="/user-agreement"
+                        <a href="#" onclick="showPage('user-agreement')"
                             style="display: block; color: inherit; text-decoration: none;">
                             <li data-i18n data-en="User Agreement" data-vn="Điều khoản sử dụng"
                                 data-th="ข้อตกลงการใช้งาน">User Agreement</li>
 
                         </a>
-                        <a href="/privacy-policy"
+                        <a href="#" onclick="showPage('privacy-policy')"
                             style="display: block; color: inherit; text-decoration: none;">
                             <li data-i18n data-en="Privacy Policy" data-vn="Chính sách bảo mật"
                                 data-th="นโยบายความเป็นส่วนตัว">Privacy Policy</li>
                         </a>
-                        <a href="/application-rules"
+                        <a href="#" onclick="showPage('application-rules')"
                             style="display: block; color: inherit; text-decoration: none;">
                             <li data-i18n data-en="Mynewone Rules" data-vn="Quy tắc Mynewone" data-th="กฎของ Mynewone">
                                 Mynewone Rules</li>
                         </a>
-                        <a href="/cookie-policy"
+                        <a href="#" onclick="showPage('cookie-policy')"
                             style="display: block; color: inherit; text-decoration: none;">
                             <li data-i18n data-en="Cookie Policy" data-vn="Chính sách Cookie" data-th="นโยบายคุกกี้">
                                 Cookie Policy</li>
@@ -437,11 +530,11 @@
                 <div class="footer-social">
                     <h4>Follow Us</h4>
                     <div class="social-icons">
-                        <img src="./landing-page/assets/images/facebook.svg" alt="Facebook" />
-                        <img src="./landing-page/assets/images/zalo.svg" alt="Zalo" />
-                        <img src="./landing-page/assets/images/linkedin.svg" alt="LinkedIn" />
-                        <img src="./landing-page/assets/images/telegram.svg" alt="Telegram" />
-                        <img src="./landing-page/assets/images/x-logo.svg" alt="X" />
+                        <img src="./assets/images/facebook.svg" alt="Facebook" />
+                        <img src="./assets/images/zalo.svg" alt="Zalo" />
+                        <img src="./assets/images/linkedin.svg" alt="LinkedIn" />
+                        <img src="./assets/images/telegram.svg" alt="Telegram" />
+                        <img src="./assets/images/x-logo.svg" alt="X" />
                     </div>
                 </div>
             </div>
@@ -453,8 +546,294 @@
                     data-th="สิทธิบัตรทั้งหมด">All Right Reserved</span>
             </div>
         </footer>
+            </div>
+        </div>
+
+        <!-- User Agreement Page -->
+        <div id="user-agreement-page" class="page hidden">
+            <div class="policy-container">
+                <div class="policy-content">
+                    <a href="#" onclick="showPage('home')" class="back-link">← Back to Home</a>
+
+                    <h1>User Agreement</h1>
+                    <p class="update-info">Latest update: 23/4/2025</p>
+
+                    <h2>1. YOUR ACCESS TO THE SERVICES</h2>
+                    <p>No one under 13 is allowed to use or access the Services. We may offer additional Services that
+                        require you to be older to use them, so please read all notices and any Additional Terms
+                        carefully when you access the Services.</p>
+                    <p>By using the Services, you state that:</p>
+                    <ul>
+                        <li>You are at least 13 years old and over the minimum age required by the laws of your country
+                            of residence to access and use the Services;</li>
+                        <li>You can form a binding contract with us, or, if you are over 13 but under the age of
+                            majority in your jurisdiction, that your legal guardian has reviewed and agrees to these
+                            Terms;</li>
+                        <li>You are not barred from using the Services under all applicable laws; and</li>
+                        <li>You have not been permanently suspended or removed from the Services.</li>
+                    </ul>
+                    <p>If you are accepting these Terms on behalf of another legal entity, including a business or
+                        government entity, you represent that you have full legal authority to bind such entity to these
+                        Terms.</p>
+
+                    <h2>2. PRIVACY</h2>
+                    <p><a href="#" onclick="showPage('privacy-policy')">Privacy Policy</a> explains how and why we collect, use, and share information about you when you
+                        access or use our Services. You understand that through your use of the Services, you consent to
+                        the collection and use of this information as set forth in the <a href="#" onclick="showPage('privacy-policy')">Privacy Policy</a>.</p>
+
+                    <h2>3. YOUR USE OF THE SERVICES</h2>
+                    <p>Subject to your complete and ongoing compliance with these Terms, Mynewone grants you a personal,
+                        non-transferable, non-exclusive, revocable, limited license to: (a) install and use a copy of
+                        our mobile application associated with the Services that is obtained from a legitimate
+                        marketplace on a mobile device owned or controlled by you; and (b) access and use the Services.
+                        We reserve all rights not expressly granted to you by these Terms.</p>
+                    <p>Except and solely to the extent such a restriction is impermissible under applicable law, you may
+                        not, without our written agreement:</p>
+                    <ul>
+                        <li>license, sell, transfer, assign, distribute, host, or otherwise commercially exploit the
+                            Services or Content;</li>
+                        <li>modify, prepare derivative works of, disassemble, decompile, or reverse engineer any part of
+                            the Services or Content; or</li>
+                        <li>access the Services or Content in order to build a similar or competitive website, product,
+                            or service, except as permitted under any Additional Terms (as defined below).</li>
+                    </ul>
+
+                    <h2>4. YOUR ACCOUNT AND ACCOUNT SECURITY</h2>
+                    <p>To use certain features of our Services, you may be required to create a Mynewone account (an
+                        "Account") and provide us with a username, password, and certain other information about
+                        yourself as set forth in the <a href="#" onclick="showPage('privacy-policy')">Privacy Policy</a>.</p>
+
+                    <h2>5. YOUR CONTENT</h2>
+                    <p>The Services may contain information, text, links, graphics, photos, videos, audio, streams,
+                        software, tools, or other materials ("Content"), including Content created with or submitted to
+                        the Services by you or through your Account ("Your Content").</p>
+
+                    <h2>6. THINGS YOU CAN NOT DO</h2>
+                    <p>When using or accessing the Services, you must comply with these Terms and all applicable laws,
+                        rules, and regulations. Please review <a href="#" onclick="showPage('application-rules')">the Application Rules</a>, which contain our rules about prohibited content
+                        and conduct.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Privacy Policy Page -->
+        <div id="privacy-policy-page" class="page hidden">
+            <div class="policy-container">
+                <div class="policy-content">
+                    <a href="#" onclick="showPage('home')" class="back-link">← Back to Home</a>
+
+                    <h1>Privacy Policy</h1>
+                    <p class="update-info">Latest update: 23/4/2025</p>
+
+                    <h2>1. INFORMATION WE COLLECT</h2>
+                    <p>We collect information you provide directly to us, such as when you create an account, use our services, or communicate with us. This may include:</p>
+                    <ul>
+                        <li>Account information (username, email address, password)</li>
+                        <li>Profile information (display name, profile picture, bio)</li>
+                        <li>Content you create or share (posts, comments, messages)</li>
+                        <li>Communication with us (support requests, feedback)</li>
+                    </ul>
+
+                    <h2>2. HOW WE USE YOUR INFORMATION</h2>
+                    <p>We use the information we collect to:</p>
+                    <ul>
+                        <li>Provide, maintain, and improve our services</li>
+                        <li>Process transactions and send related information</li>
+                        <li>Send technical notices, updates, security alerts, and support messages</li>
+                        <li>Respond to your comments, questions, and customer service requests</li>
+                        <li>Monitor and analyze trends, usage, and activities in connection with our services</li>
+                    </ul>
+
+                    <h2>3. SHARING OF INFORMATION</h2>
+                    <p>We may share your information in the following circumstances:</p>
+                    <ul>
+                        <li>With your consent or at your direction</li>
+                        <li>With third-party vendors, consultants, and other service providers</li>
+                        <li>To comply with laws, regulations, or legal requests</li>
+                        <li>To protect the rights, property, and safety of Mynewone, our users, and others</li>
+                    </ul>
+
+                    <h2>4. DATA SECURITY</h2>
+                    <p>We take reasonable measures to help protect your personal information from loss, theft, misuse, unauthorized access, disclosure, alteration, and destruction.</p>
+
+                    <h2>5. COOKIES AND TRACKING</h2>
+                    <p>We use cookies and similar tracking technologies to collect and use personal information about you. For more information about our use of cookies, please see our <a href="#" onclick="showPage('cookie-policy')">Cookie Policy</a>.</p>
+
+                    <h2>6. CONTACT US</h2>
+                    <p>If you have any questions about this Privacy Policy, please contact us at:</p>
+                    <p>Email: privacy@mynewone.com<br>
+                    Address: 123 Phan Dang Luu Street, Ward 1, Phu Nhuan District, Ho Chi Minh City</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Application Rules Page -->
+        <div id="application-rules-page" class="page hidden">
+            <div class="policy-container">
+                <div class="policy-content">
+                    <a href="#" onclick="showPage('home')" class="back-link">← Back to Home</a>
+
+                    <h1>Mynewone Application Rules</h1>
+                    <p class="update-info">Latest update: 23/4/2025</p>
+
+                    <p>These rules help ensure that Mynewone remains a safe, welcoming, and productive space for everyone. By using our services, you agree to follow these rules.</p>
+
+                    <div class="rule-section">
+                        <h2>1. RESPECT OTHERS</h2>
+                        <p>Treat all users with respect and kindness. We do not tolerate:</p>
+                        <ul>
+                            <li>Harassment, bullying, or intimidation</li>
+                            <li>Hate speech or discrimination based on race, gender, religion, nationality, disability, or sexual orientation</li>
+                            <li>Personal attacks or threats of violence</li>
+                            <li>Doxxing or sharing personal information without consent</li>
+                        </ul>
+                    </div>
+
+                    <div class="rule-section">
+                        <h2>2. AUTHENTIC CONTENT</h2>
+                        <p>Share genuine, original content and be honest about who you are:</p>
+                        <ul>
+                            <li>Do not impersonate others or create fake accounts</li>
+                            <li>Do not spread misinformation or false news</li>
+                            <li>Give credit when sharing others' work</li>
+                            <li>Do not manipulate votes or engagement artificially</li>
+                        </ul>
+                    </div>
+
+                    <div class="rule-section">
+                        <h2>3. APPROPRIATE CONTENT</h2>
+                        <p>Keep content appropriate for our diverse community:</p>
+                        <ul>
+                            <li>No explicit sexual content or nudity</li>
+                            <li>No graphic violence or gore</li>
+                            <li>No content promoting illegal activities</li>
+                            <li>No spam or excessive self-promotion</li>
+                        </ul>
+                    </div>
+
+                    <h2>4. CONSEQUENCES</h2>
+                    <p>Violations of these rules may result in:</p>
+                    <ul>
+                        <li>Content removal</li>
+                        <li>Temporary account suspension</li>
+                        <li>Permanent account ban</li>
+                        <li>Reporting to law enforcement (for illegal activities)</li>
+                    </ul>
+
+                    <p><strong>Remember:</strong> These rules are in addition to our <a href="#" onclick="showPage('user-agreement')">User Agreement</a> and <a href="#" onclick="showPage('privacy-policy')">Privacy Policy</a>. By using Mynewone, you agree to follow all of our terms and policies.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cookie Policy Page -->
+        <div id="cookie-policy-page" class="page hidden">
+            <div class="policy-container">
+                <div class="policy-content">
+                    <a href="#" onclick="showPage('home')" class="back-link">← Back to Home</a>
+
+                    <h1>Cookie Policy</h1>
+                    <p class="update-info">Latest update: 23/4/2025</p>
+
+                    <h2>1. WHAT ARE COOKIES?</h2>
+                    <p>Cookies are small text files that are placed on your computer or mobile device when you visit a website. They are widely used to make websites work more efficiently and to provide information to website owners.</p>
+
+                    <h2>2. HOW WE USE COOKIES</h2>
+                    <p>We use cookies to:</p>
+                    <ul>
+                        <li>Remember your preferences and settings</li>
+                        <li>Keep you logged in to your account</li>
+                        <li>Analyze how you use our website</li>
+                        <li>Improve our services and user experience</li>
+                        <li>Provide personalized content and advertisements</li>
+                    </ul>
+
+                    <h2>3. TYPES OF COOKIES WE USE</h2>
+
+                    <div class="cookie-type">
+                        <h3>Essential Cookies</h3>
+                        <p>These cookies are necessary for the website to function properly. They enable basic functions like page navigation and access to secure areas of the website.</p>
+                    </div>
+
+                    <div class="cookie-type">
+                        <h3>Performance Cookies</h3>
+                        <p>These cookies collect information about how visitors use our website, such as which pages are visited most often. This data helps us improve how our website works.</p>
+                    </div>
+
+                    <div class="cookie-type">
+                        <h3>Functionality Cookies</h3>
+                        <p>These cookies allow the website to remember choices you make (such as your username, language, or region) and provide enhanced, more personal features.</p>
+                    </div>
+
+                    <h2>4. MANAGING COOKIES</h2>
+                    <p>You can control and manage cookies in several ways:</p>
+                    <ul>
+                        <li><strong>Browser Settings:</strong> Most browsers allow you to view, delete, and block cookies through their settings</li>
+                        <li><strong>Opt-out Tools:</strong> Use industry opt-out tools for advertising cookies</li>
+                        <li><strong>Our Cookie Preferences:</strong> Use our cookie preference center (if available)</li>
+                    </ul>
+
+                    <h2>5. CONTACT US</h2>
+                    <p>If you have any questions about our use of cookies, please contact us at:</p>
+                    <p>Email: privacy@mynewone.com<br>
+                    Address: 123 Phan Dang Luu Street, Ward 1, Phu Nhuan District, Ho Chi Minh City</p>
+
+                    <p>For more information about our data practices, please see our <a href="#" onclick="showPage('privacy-policy')">Privacy Policy</a>.</p>
+                </div>
+            </div>
+        </div>
     </div>
-    <script src="./landing-page/assets/js/script.js"></script>
+
+    <script src="./assets/js/script.js"></script>
+    <script>
+        // SPA Navigation
+        function showPage(pageId) {
+            // Hide all pages
+            const pages = document.querySelectorAll('.page');
+            pages.forEach(page => page.classList.add('hidden'));
+
+            // Show the requested page
+            const targetPage = document.getElementById(pageId + '-page');
+            if (targetPage) {
+                targetPage.classList.remove('hidden');
+
+                // Update URL without page reload
+                const url = pageId === 'home' ? '/' : '/' + pageId;
+                window.history.pushState({page: pageId}, '', url);
+
+                // Update page title
+                const titles = {
+                    'home': 'Mynewone',
+                    'user-agreement': 'MyNewOne - User Agreement',
+                    'privacy-policy': 'MyNewOne - Privacy Policy',
+                    'application-rules': 'MyNewOne - Application Rules',
+                    'cookie-policy': 'MyNewOne - Cookie Policy'
+                };
+                document.title = titles[pageId] || 'Mynewone';
+            }
+        }
+
+        // Handle browser back/forward buttons
+        window.addEventListener('popstate', function(event) {
+            const page = event.state?.page || 'home';
+            showPage(page);
+        });
+
+        // Initialize the correct page based on URL
+        function initializePage() {
+            const path = window.location.pathname;
+            let pageId = 'home';
+
+            if (path === '/user-agreement') pageId = 'user-agreement';
+            else if (path === '/privacy-policy') pageId = 'privacy-policy';
+            else if (path === '/application-rules') pageId = 'application-rules';
+            else if (path === '/cookie-policy') pageId = 'cookie-policy';
+
+            showPage(pageId);
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', initializePage);
+    </script>
 </body>
 
 </html>
