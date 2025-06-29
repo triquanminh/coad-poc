@@ -95,31 +95,26 @@ const SlotSelector = ({ onSlotsSelected, selectedSlots = [] }) => {
               )}
             </div>
 
-            <div className="slot-preview">
+            <div className="slot-preview-assignment">
               <div
-                className={`slot-preview-container ${slotType}`}
+                className={`slot-preview-box ${slotType}`}
                 style={{
-                  width: slotType === 'top' ? '200px' :
+                  width: slotType === 'top' ? '160px' :
                         slotType === 'sidebar' ? '30px' :
-                        slotType === 'catfish' ? '200px' :
-                        slotType === 'logo' ? '80px' :
-                        Math.min(slot.width / 3, 160),
-                  height: slotType === 'top' ? '38px' :
-                         slotType === 'sidebar' ? '160px' :
-                         slotType === 'catfish' ? '38px' :
-                         slotType === 'logo' ? '80px' :
-                         Math.min(slot.height / 3, 100),
+                        slotType === 'catfish' ? '160px' :
+                        slotType === 'logo' ? '60px' :
+                        Math.min(slot.width / 6, 80),
+                  height: slotType === 'top' ? '30px' :
+                         slotType === 'sidebar' ? '120px' :
+                         slotType === 'catfish' ? '30px' :
+                         slotType === 'logo' ? '60px' :
+                         Math.min(slot.height / 6, 40),
                   aspectRatio: slotType === 'logo' ? '1 / 1' : `${slot.width} / ${slot.height}`
                 }}
               >
-                <div className={`slot-preview-box ${slotType}`}>
-                  <span className="preview-label">{slot.name}</span>
-                  {slotType === 'catfish' && slot.isDismissible && (
-                    <div className="catfish-dismiss-btn">×</div>
-                  )}
-                </div>
-                {slotType === 'catfish' && (
-                  <div className="catfish-position-indicator">Fixed Bottom</div>
+                <span className="preview-label">{slot.name}</span>
+                {slotType === 'catfish' && slot.isDismissible && (
+                  <div className="catfish-dismiss-btn">×</div>
                 )}
               </div>
             </div>
