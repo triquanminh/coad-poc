@@ -287,7 +287,6 @@
         container.style.borderBottom = 'none';
         container.style.pointerEvents = 'auto';
 
-        // Toggle button will be added after ad rendering in renderAd method
       } else if (slotType === 'top') {
         container.style.display = 'block';
         container.style.margin = '10px auto';
@@ -320,84 +319,7 @@
       }
     }
 
-    makeDismissible(container) {
-      this.log('makeDismissible called for container:', container.id);
-      let isMinimized = false;
 
-      const toggleBtn = document.createElement('button');
-      toggleBtn.innerHTML = '▼';
-      toggleBtn.className = 'CoAd-toggle-btn';
-      toggleBtn.style.cssText = `
-        position: absolute !important;
-        top: 8px !important;
-        right: 8px !important;
-        width: 28px !important;
-        height: 28px !important;
-        background: rgba(0, 0, 0, 0.8) !important;
-        color: white !important;
-        border: 2px solid rgba(255, 255, 255, 0.5) !important;
-        border-radius: 50% !important;
-        font-size: 12px !important;
-        font-weight: bold !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        cursor: pointer !important;
-        z-index: 100001 !important;
-        transition: all 0.3s ease !important;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
-      `;
-
-      toggleBtn.addEventListener('click', () => {
-        if (!isMinimized) {
-          container.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease';
-          container.style.transform = 'translateX(-50%) translateY(calc(100% - 40px))';
-          container.style.opacity = '0.9';
-          toggleBtn.innerHTML = '▲';
-          toggleBtn.style.background = 'rgba(69, 183, 209, 0.8)';
-          isMinimized = true;
-          this.log('Catfish ad minimized by user');
-        } else {
-          container.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease';
-          container.style.transform = 'translateX(-50%) translateY(0)';
-          container.style.opacity = '1';
-          toggleBtn.innerHTML = '▼';
-          toggleBtn.style.background = 'rgba(0, 0, 0, 0.6)';
-          isMinimized = false;
-          this.log('Catfish ad expanded by user');
-        }
-      });
-
-      toggleBtn.addEventListener('mouseenter', () => {
-        if (!isMinimized) {
-          toggleBtn.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-          toggleBtn.style.transform = 'scale(1.1)';
-        } else {
-          toggleBtn.style.backgroundColor = 'rgba(69, 183, 209, 1)';
-          toggleBtn.style.transform = 'scale(1.1)';
-        }
-      });
-
-      toggleBtn.addEventListener('mouseleave', () => {
-        toggleBtn.style.transform = 'scale(1)';
-        if (!isMinimized) {
-          toggleBtn.style.backgroundColor = 'rgba(0, 0, 0, 0.6)';
-        } else {
-          toggleBtn.style.backgroundColor = 'rgba(69, 183, 209, 0.8)';
-        }
-      });
-
-      container.style.position = 'relative';
-      container.appendChild(toggleBtn);
-      setTimeout(() => {
-        toggleBtn.style.display = 'flex';
-        toggleBtn.style.visibility = 'visible';
-        this.log('Toggle button visibility forced for:', container.id);
-      }, 100);
-
-      this.log('Toggle button added to container:', container.id);
-      this.log('Container children count:', container.children.length);
-    }
 
     async loadAds() {
       const loadPromises = Array.from(this.adContainers.keys()).map(containerId => 
@@ -486,7 +408,6 @@
         return;
       }
 
-      // Use dimensions from API response (which includes slot dimensions)
       const width = adData.width || 300;
       const height = adData.height || 250;
       const slotType = adData.slotType || container.slotType || 'custom';
@@ -511,7 +432,6 @@
         iframeDoc.write(adContent);
         iframeDoc.close();
 
-        // Add click tracking to iframe content
         iframeDoc.addEventListener('click', () => {
           this.trackAdClick(adData.id, containerId);
         });
@@ -520,7 +440,6 @@
       container.element.innerHTML = '';
       container.element.appendChild(iframe);
 
-      // Add toggle button for catfish ads after rendering
       if (slotType === 'catfish') {
         this.log('Adding toggle button to catfish ad after rendering');
         this.addCatfishToggleButton(container.element);
@@ -537,49 +456,21 @@
       const toggleBtn = document.createElement('button');
       toggleBtn.innerHTML = '▼';
       toggleBtn.className = 'CoAd-catfish-toggle-btn';
-      toggleBtn.style.cssText = `
-        position: absolute !important;
-        top: 8px !important;
-        left: 8px !important;
-        width: 32px !important;
-        height: 32px !important;
-        background: rgba(0, 0, 0, 0.8) !important;
-        color: white !important;
-        border: 2px solid rgba(255, 255, 255, 0.7) !important;
-        border-radius: 50% !important;
-        font-size: 14px !important;
-        font-weight: bold !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        cursor: pointer !important;
-        z-index: 100001 !important;
-        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4) !important;
-        font-family: Arial, sans-serif !important;
-      `;
 
       toggleBtn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
 
         if (!isMinimized) {
-          // Minimize - hide the ad content but keep the button visible
-          const iframe = container.querySelector('iframe');
-          if (iframe) {
-            iframe.style.display = 'none';
-          }
-          container.style.height = '40px';
+          container.style.transition = 'bottom 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+          container.style.bottom = '-110px';
           toggleBtn.innerHTML = '▲';
           toggleBtn.style.background = 'rgba(69, 183, 209, 0.9)';
           isMinimized = true;
           this.log('Catfish ad minimized by user');
         } else {
-          // Expand - show the ad content
-          const iframe = container.querySelector('iframe');
-          if (iframe) {
-            iframe.style.display = 'block';
-          }
-          container.style.height = 'auto';
+          container.style.transition = 'bottom 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
+          container.style.bottom = '0';
           toggleBtn.innerHTML = '▼';
           toggleBtn.style.background = 'rgba(0, 0, 0, 0.8)';
           isMinimized = false;
@@ -890,10 +781,9 @@
           100% { opacity: 1; }
         }
 
-        /* Catfish ad specific styles */
         .CoAd-catfish {
           position: fixed !important;
-          bottom: 0 !important;
+          bottom: 0;
           left: 50% !important;
           transform: translateX(-50%) !important;
           z-index: 99999 !important;
@@ -919,7 +809,7 @@
         .CoAd-toggle-btn {
           position: absolute !important;
           top: 8px !important;
-          right: 8px !important;
+          left: 8px !important;
           width: 28px !important;
           height: 28px !important;
           background: rgba(0, 0, 0, 0.6) !important;
@@ -937,6 +827,32 @@
         }
 
         .CoAd-toggle-btn:hover {
+          transform: scale(1.1) !important;
+        }
+
+        .CoAd-catfish-toggle-btn {
+          position: absolute !important;
+          top: 8px !important;
+          left: 8px !important;
+          width: 32px !important;
+          height: 32px !important;
+          background: rgba(0, 0, 0, 0.8) !important;
+          color: white !important;
+          border: 2px solid rgba(255, 255, 255, 0.7) !important;
+          border-radius: 50% !important;
+          font-size: 14px !important;
+          font-weight: bold !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          cursor: pointer !important;
+          z-index: 100001 !important;
+          box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4) !important;
+          font-family: Arial, sans-serif !important;
+          transition: all 0.3s ease !important;
+        }
+
+        .CoAd-catfish-toggle-btn:hover {
           transform: scale(1.1) !important;
         }
 
