@@ -888,6 +888,92 @@
 
     error(...args) {
       console.error('[CoAd SDK ERROR]', ...args);
+
+      // Send error to logging API
+      this.sendErrorToAPI(...args);
+    }
+
+    async sendErrorToAPI(...args) {
+      try {
+        // Don't send logs if we don't have API URL or if this is a logging error to prevent infinite loops
+        if (!this.config.apiUrl || args.some(arg =>
+          typeof arg === 'string' && arg.includes('Failed to send error log')
+        )) {
+          return;
+        }
+
+        // Extract error information
+        let errorMessage = '';
+        let stackTrace = '';
+        let errorType = 'SDK_ERROR';
+        let additionalData = {};
+
+        // Process arguments to extract error details
+        args.forEach((arg, index) => {
+          if (typeof arg === 'string') {
+            if (index === 0) {
+              errorMessage = arg;
+            } else {
+              errorMessage += ' ' + arg;
+            }
+          } else if (arg instanceof Error) {
+            errorMessage += ' ' + arg.message;
+            stackTrace = arg.stack || '';
+            errorType = arg.name || 'Error';
+          } else if (typeof arg === 'object') {
+            additionalData = { ...additionalData, ...arg };
+          }
+        });
+
+        // Prepare error log data
+        const errorLogData = {
+          publisherId: this.config.publisherId || null,
+          errorType,
+          errorMessage: errorMessage.trim(),
+          stackTrace,
+          url: window.location.href,
+          userAgent: navigator.userAgent,
+          sdkConfig: {
+            apiUrl: this.config.apiUrl,
+            publisherId: this.config.publisherId,
+            debug: this.config.debug,
+            initialized: this.isInitialized,
+            containersCount: this.adContainers.size,
+            loadedAdsCount: this.loadedAds.size
+          },
+          additionalData: {
+            timestamp: new Date().toISOString(),
+            windowSize: {
+              width: window.innerWidth,
+              height: window.innerHeight
+            },
+            ...additionalData
+          }
+        };
+
+        // Send to logging endpoint
+        const response = await fetch(`${this.config.apiUrl}/log`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(errorLogData)
+        });
+
+        if (!response.ok) {
+          console.warn('[CoAd SDK] Failed to send error log:', response.status, response.statusText);
+        } else {
+          const result = await response.json();
+          if (this.config.debug) {
+            console.log('[CoAd SDK] Error logged with ID:', result.errorLogId);
+          }
+        }
+
+      } catch (logError) {
+        // Don't log this error to prevent infinite loops
+        console.warn('[CoAd SDK] Failed to send error log:', logError.message);
+      }
     }
 
     // Public API methods

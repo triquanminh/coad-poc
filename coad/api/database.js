@@ -91,6 +91,29 @@ class Database {
         console.log('Health checks table ready')
       }
     })
+
+    // Create error_logs table for tracking SDK errors
+    this.db.run(`
+      CREATE TABLE IF NOT EXISTS error_logs (
+        id TEXT PRIMARY KEY,
+        publisher_id TEXT,
+        error_type TEXT NOT NULL,
+        error_message TEXT NOT NULL,
+        stack_trace TEXT,
+        url TEXT,
+        user_agent TEXT,
+        sdk_config TEXT,
+        additional_data TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (publisher_id) REFERENCES websites (publisher_id) ON DELETE SET NULL
+      )
+    `, (err) => {
+      if (err) {
+        console.error('Error creating error_logs table:', err.message)
+      } else {
+        console.log('Error logs table ready')
+      }
+    })
   }
 
   addSlotColumnsIfNotExists() {
@@ -427,6 +450,105 @@ class Database {
             reject(err)
           } else {
             resolve(rows)
+          }
+        }
+      )
+    })
+  }
+
+  // Error log methods
+  async logError(errorData) {
+    const id = uuidv4()
+    const {
+      publisherId,
+      errorType,
+      errorMessage,
+      stackTrace,
+      url,
+      userAgent,
+      sdkConfig,
+      additionalData
+    } = errorData
+
+    return new Promise((resolve, reject) => {
+      this.db.run(`
+        INSERT INTO error_logs (id, publisher_id, error_type, error_message, stack_trace, url, user_agent, sdk_config, additional_data)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `, [
+        id,
+        publisherId,
+        errorType,
+        errorMessage,
+        stackTrace,
+        url,
+        userAgent,
+        JSON.stringify(sdkConfig),
+        JSON.stringify(additionalData)
+      ],
+      function(err) {
+        if (err) {
+          reject(err)
+        } else {
+          resolve({ id })
+        }
+      })
+    })
+  }
+
+  async getErrorLogs(limit = 50) {
+    return new Promise((resolve, reject) => {
+      this.db.all(
+        'SELECT * FROM error_logs ORDER BY created_at DESC LIMIT ?',
+        [limit],
+        (err, rows) => {
+          if (err) {
+            reject(err)
+          } else {
+            resolve(rows.map(row => ({
+              ...row,
+              sdk_config: row.sdk_config ? JSON.parse(row.sdk_config) : null,
+              additional_data: row.additional_data ? JSON.parse(row.additional_data) : null
+            })))
+          }
+        }
+      )
+    })
+  }
+
+  async getErrorLogsByPublisher(publisherId, limit = 50) {
+    return new Promise((resolve, reject) => {
+      this.db.all(
+        'SELECT * FROM error_logs WHERE publisher_id = ? ORDER BY created_at DESC LIMIT ?',
+        [publisherId, limit],
+        (err, rows) => {
+          if (err) {
+            reject(err)
+          } else {
+            resolve(rows.map(row => ({
+              ...row,
+              sdk_config: row.sdk_config ? JSON.parse(row.sdk_config) : null,
+              additional_data: row.additional_data ? JSON.parse(row.additional_data) : null
+            })))
+          }
+        }
+      )
+    })
+  }
+
+  async getErrorLogsByTimeRange(startDate, endDate, limit = 100) {
+    return new Promise((resolve, reject) => {
+      this.db.all(
+        'SELECT * FROM error_logs WHERE created_at BETWEEN ? AND ? ORDER BY created_at DESC LIMIT ?',
+        [startDate, endDate, limit],
+        (err, rows) => {
+          if (err) {
+            reject(err)
+          } else {
+            resolve(rows.map(row => ({
+              ...row,
+              sdk_config: row.sdk_config ? JSON.parse(row.sdk_config) : null,
+              additional_data: row.additional_data ? JSON.parse(row.additional_data) : null
+            })))
           }
         }
       )

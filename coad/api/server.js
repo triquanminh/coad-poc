@@ -824,6 +824,123 @@ app.get('/api/admin/stats', async (req, res) => {
   }
 })
 
+// Error logging endpoint for AdSDK
+app.post('/api/log', async (req, res) => {
+  try {
+    const {
+      publisherId,
+      errorType,
+      errorMessage,
+      stackTrace,
+      url,
+      userAgent,
+      sdkConfig,
+      additionalData
+    } = req.body
+
+    // Validate required fields
+    if (!errorType || !errorMessage) {
+      return res.status(400).json({
+        error: 'errorType and errorMessage are required',
+        timestamp: new Date().toISOString()
+      })
+    }
+
+    console.log(`[ERROR LOG] Publisher: ${publisherId || 'unknown'}, Type: ${errorType}, Message: ${errorMessage}`)
+
+    // Log the error to database
+    const errorLogData = {
+      publisherId: publisherId || null,
+      errorType,
+      errorMessage,
+      stackTrace: stackTrace || null,
+      url: url || null,
+      userAgent: userAgent || req.headers['user-agent'] || null,
+      sdkConfig: sdkConfig || null,
+      additionalData: additionalData || null
+    }
+
+    const result = await db.logError(errorLogData)
+
+    console.log(`[ERROR LOG] Successfully logged error with ID: ${result.id}`)
+
+    res.json({
+      success: true,
+      errorLogId: result.id,
+      timestamp: new Date().toISOString()
+    })
+
+  } catch (error) {
+    console.error('[ERROR LOG] Failed to log error:', error.message)
+    res.status(500).json({
+      error: 'Failed to log error',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    })
+  }
+})
+
+// Get error logs (all or by publisher)
+app.get('/api/logs', async (req, res) => {
+  try {
+    const { publisherId, limit = 50 } = req.query
+
+    let logs
+    if (publisherId) {
+      logs = await db.getErrorLogsByPublisher(publisherId, parseInt(limit))
+    } else {
+      logs = await db.getErrorLogs(parseInt(limit))
+    }
+
+    res.json({
+      success: true,
+      logs,
+      count: logs.length,
+      timestamp: new Date().toISOString()
+    })
+
+  } catch (error) {
+    console.error('Error fetching error logs:', error.message)
+    res.status(500).json({
+      error: 'Failed to fetch error logs',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    })
+  }
+})
+
+// Get error logs by time range
+app.get('/api/logs/range', async (req, res) => {
+  try {
+    const { startDate, endDate, limit = 100 } = req.query
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({
+        error: 'startDate and endDate are required',
+        timestamp: new Date().toISOString()
+      })
+    }
+
+    const logs = await db.getErrorLogsByTimeRange(startDate, endDate, parseInt(limit))
+
+    res.json({
+      success: true,
+      logs,
+      count: logs.length,
+      dateRange: { startDate, endDate },
+      timestamp: new Date().toISOString()
+    })
+
+  } catch (error) {
+    console.error('Error fetching error logs by time range:', error.message)
+    res.status(500).json({
+      error: 'Failed to fetch error logs by time range',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    })
+  }
+})
+
 // Health check for the API itself
 app.get('/health', (req, res) => {
   res.json({
@@ -848,6 +965,9 @@ app.listen(PORT, () => {
   console.log('- GET  /api/bot/config-by-domain - Auto-detect config by domain')
   console.log('- GET  /api/bot/config/:id - Get bot config (legacy)')
   console.log('- GET  /api/ads - Serve ads')
+  console.log('- POST /api/log - Log SDK errors')
+  console.log('- GET  /api/logs - Get error logs (all or by publisherId)')
+  console.log('- GET  /api/logs/range - Get error logs by time range')
   console.log('- GET  /api/admin/publishers - Admin: Get all publishers')
   console.log('- DELETE /api/admin/publishers/:id - Admin: Delete publisher')
   console.log('- GET  /api/admin/stats - Admin: Dashboard statistics')
