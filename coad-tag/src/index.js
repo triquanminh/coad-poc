@@ -16,7 +16,6 @@ import { createAnalytics } from './analytics.js';
 import { createAdRenderer } from './ad-renderer.js';
 import { createContainerManager } from './container-manager.js';
 
-// State management
 let tagConfig = null;
 let logger = null;
 let apiClient = null;
@@ -29,10 +28,7 @@ let isInitialized = false;
 let initStartTime = null;
 
 const setupCoAdTag = (config) => {
-  // Get publisher ID from script URL parameter if not provided in config
   const publisherIdFromURL = URLUtils.getPublisherIdFromScriptURL();
-
-  // Merge config with publisherId from URL (URL takes precedence)
   const mergedConfig = {
     ...config,
     ...(publisherIdFromURL && { publisherId: publisherIdFromURL })
@@ -51,19 +47,16 @@ const setupCoAdTag = (config) => {
   logger.log('Configuration setup complete', tagConfig);
 };
 
-// Initialize Tag with error handling and retry logic
 const startInitialization = () => {
   initCoAdTag().catch(error => {
     console.error('[CoAd Tag] Initialization failed:', error);
 
-    // If it's a publisher ID error, show helpful message
     if (error.message.includes('Publisher ID is required')) {
       console.warn('[CoAd Tag] To fix this: Ensure your script tag includes the publisherId parameter');
     } else if (error.message.includes('not found')) {
       console.warn('[CoAd Tag] Publisher configuration not found. Please check your publisher ID or register at the CoAd publisher dashboard');
     }
 
-    // Don't retry for configuration errors
     if (!error.message.includes('Publisher ID is required') && !error.message.includes('not found')) {
       setTimeout(() => startInitialization(), 2000);
     }
@@ -80,20 +73,16 @@ const initCoAdTag = async () => {
 
   try {
     await apiClient.checkConnectivity(tagConfig);
-
     if (!tagConfig.publisherId) {
       throw new Error('Publisher ID is required. Please ensure the script tag includes ?publisherId=your-publisher-id parameter.');
     }
-
-    logger.log(`Publisher ID provided: ${tagConfig.publisherId}, fetching publisher config by id...`);
+    logger.log(`Publisher ID: ${tagConfig.publisherId}, fetching publisher config by id...`);
     const apiConfig = await apiClient.fetchPublisherConfigById(tagConfig);
-
     Object.assign(tagConfig, apiConfig);
 
     if (!tagConfig.publisherId) {
-      throw new Error('Unable to determine Publisher ID. Please register this website in the CoAd Publisher Dashboard');
+      throw new Error('Unable to get Publisher ID. Please register this website in the CoAd Publisher Dashboard');
     }
-
     logger.log('Publisher config loaded:', tagConfig);
 
     await createAdContainersWithRetry();
@@ -107,7 +96,6 @@ const initCoAdTag = async () => {
     isInitialized = true;
     logger.log('CoAd Tag initialized successfully');
 
-    analytics.trackInitialization(tagConfig, true, Date.now() - initStartTime);
     EventDispatcher.dispatch('CoAd:initialized', {
       coadTag: {
         init: initCoAdTag,
@@ -117,7 +105,6 @@ const initCoAdTag = async () => {
       }
     });
   } catch (error) {
-    analytics.trackInitialization(tagConfig, false, Date.now() - initStartTime, error);
     logger.error('Failed to initialize:', error);
     throw error;
   }

@@ -1,5 +1,3 @@
-import { URLUtils, BrowserUtils } from './utils.js';
-
 async function checkConnectivity(logger, config) {
   try {
     logger.log('Health checking Ad Serving Engine...');
@@ -40,87 +38,9 @@ async function fetchPublisherConfigById(logger, config) {
   }
 }
 
-// Note: loadAd function removed - ads data is now fetched as part of fetchPublisherConfigById
-// This eliminates the need for separate API calls for each ad placement
-
-async function sendErrorLog(config, errorArgs, sdkInstance) {
-  try {
-    if (!config.apiUrl || errorArgs.some(arg =>
-      typeof arg === 'string' && arg.includes('Failed to send error log')
-    )) {
-      return;
-    }
-
-    let errorMessage = '';
-    let stackTrace = '';
-    let errorType = 'SDK_ERROR';
-    let additionalData = {};
-
-    errorArgs.forEach((arg, index) => {
-      if (typeof arg === 'string') {
-        if (index === 0) {
-          errorMessage = arg;
-        } else {
-          errorMessage += ' ' + arg;
-        }
-      } else if (arg instanceof Error) {
-        errorMessage += ' ' + arg.message;
-        stackTrace = arg.stack || '';
-        errorType = arg.name || 'Error';
-      } else if (typeof arg === 'object') {
-        additionalData = { ...additionalData, ...arg };
-      }
-    });
-
-    const errorLogData = {
-      publisherId: config.publisherId || null,
-      errorType,
-      errorMessage: errorMessage.trim(),
-      stackTrace,
-      url: URLUtils.getCurrentURL(),
-      userAgent: BrowserUtils.getUserAgent(),
-      sdkConfig: {
-        apiUrl: config.apiUrl,
-        publisherId: config.publisherId,
-        debug: config.debug,
-        initialized: sdkInstance.isInitialized,
-        containersCount: sdkInstance.adContainers.size,
-        loadedAdsCount: sdkInstance.loadedAds.size
-      },
-      additionalData: {
-        timestamp: new Date().toISOString(),
-        windowSize: BrowserUtils.getWindowSize(),
-        ...additionalData
-      }
-    };
-
-    const response = await fetch(`${config.apiUrl}/log`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify(errorLogData)
-    });
-
-    if (!response.ok) {
-      console.warn('[CoAd SDK] Failed to send error log:', response.status, response.statusText);
-    } else {
-      const result = await response.json();
-      if (config.debug) {
-        console.log('[CoAd SDK] Error logged with ID:', result.errorLogId);
-      }
-    }
-
-  } catch (logError) {
-    console.warn('[CoAd SDK] Failed to send error log:', logError.message);
-  }
-}
-
 export function createAPIClient(logger) {
   return {
     checkConnectivity: (config) => checkConnectivity(logger, config),
     fetchPublisherConfigById: (config) => fetchPublisherConfigById(logger, config),
-    sendErrorLog: sendErrorLog
   };
 }

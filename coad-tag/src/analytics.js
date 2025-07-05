@@ -56,14 +56,6 @@ function trackAdLoadFailure(logger, config, containerId, error, attempt) {
   });
 }
 
-function trackInitialization(logger, config, success, initTime, error = null) {
-  return trackEvent(logger, config, 'sdk:initialization', {
-    success,
-    initTime,
-    error: error ? error.message : null
-  });
-}
-
 function trackCatfishInteraction(logger, config, action, containerId) {
   return trackEvent(logger, config, 'catfish:interaction', {
     action, // 'minimize', 'expand', 'close'
@@ -94,7 +86,6 @@ export function createAnalytics(logger) {
     trackContainerCreated: (config, containerId, placement, slotType) => trackContainerCreated(logger, config, containerId, placement, slotType),
     trackAdLoadSuccess: (config, containerId, adId, loadTime) => trackAdLoadSuccess(logger, config, containerId, adId, loadTime),
     trackAdLoadFailure: (config, containerId, error, attempt) => trackAdLoadFailure(logger, config, containerId, error, attempt),
-    trackInitialization: (config, success, initTime, error) => trackInitialization(logger, config, success, initTime, error),
     trackCatfishInteraction: (config, action, containerId) => trackCatfishInteraction(logger, config, action, containerId),
     trackDOMChange: (config, changeType, elementsFound) => trackDOMChange(logger, config, changeType, elementsFound),
     trackPerformance: (config, metric, value, context) => trackPerformance(logger, config, metric, value, context)

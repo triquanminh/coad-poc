@@ -2,13 +2,11 @@ import { DOMUtils, BrowserUtils } from './utils.js';
 
 function createAdContainers(logger, analytics, config, adContainers) {
   const placements = config.placementDetails || config.placements.map(p => ({ selector: p }));
-
   logger.log('Processing placements:', placements);
 
   placements.forEach((placementDetail, placementIndex) => {
     try {
       const slotType = placementDetail.slot_type;
-
       if (slotType === 'catfish') {
         createCatfishAd(logger, analytics, config, placementDetail, adContainers);
         return;
@@ -26,7 +24,6 @@ function createAdContainers(logger, analytics, config, adContainers) {
       // TODO: TBU on whether we will mount to all matched selector
       elements.forEach((element, elementIndex) => {
         const containerId = `CoAd-ad-${config.publisherId}-${placementIndex}-${elementIndex}`;
-
         if (adContainers.has(containerId)) {
           logger.log(`Container ${containerId} already exists, skipping`);
           return;
@@ -61,12 +58,10 @@ function createAdContainers(logger, analytics, config, adContainers) {
 
 function createCatfishAd(logger, analytics, config, placementDetail, adContainers) {
   const containerId = `CoAd-catfish-${config.publisherId}`;
-
   if (adContainers.has(containerId)) {
     logger.log('Catfish ad already exists, skipping');
     return;
   }
-
   logger.log('Creating catfish ad overlay');
 
   const adContainer = DOMUtils.createElement('div', {
@@ -78,9 +73,7 @@ function createCatfishAd(logger, analytics, config, placementDetail, adContainer
   });
 
   applySlotStyling(logger, adContainer, placementDetail);
-
   document.body.appendChild(adContainer);
-
   adContainers.set(containerId, {
     element: adContainer,
     placement: 'catfish-overlay',
@@ -103,7 +96,6 @@ function applySlotStyling(logger, container, placementDetail) {
     container.style.minHeight = `${placementDetail.height}px`;
     container.style.maxWidth = `${placementDetail.width}px`;
     container.style.maxHeight = `${placementDetail.height}px`;
-
     logger.log(`Applied slot dimensions: ${placementDetail.width}x${placementDetail.height} for slot type: ${slotType}`);
   }
 
@@ -118,7 +110,6 @@ function applySlotStyling(logger, container, placementDetail) {
     container.style.border = '1px solid #e0e0e0';
     container.style.borderBottom = 'none';
     container.style.pointerEvents = 'auto';
-
   } else if (slotType === 'top') {
     container.style.display = 'block';
     container.style.margin = '10px auto';
@@ -143,7 +134,6 @@ function applySlotStyling(logger, container, placementDetail) {
 
 function insertAdContainer(logger, container, targetElement, placementDetail) {
   const slotType = placementDetail.slot_type;
-
   if (slotType === 'catfish') {
     logger.log('Catfish container already appended to body');
   } else {
@@ -161,7 +151,6 @@ function setupDOMObserver(logger, analytics, config, createContainersCallback, l
 
   const observer = new MutationObserver((mutations) => {
     let shouldCheckForNewElements = false;
-
     mutations.forEach((mutation) => {
       if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
         mutation.addedNodes.forEach((node) => {
