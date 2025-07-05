@@ -494,13 +494,67 @@ app.get('/api/bot/config/:publisherId', async (req, res) => {
 
     const placements = await db.getAdPlacementsByPublisherId(publisherId)
 
-    // Return configuration for the bot
+    // Generate ads data for all placements
+    const adsData = {}
+
+    // Array of real ad banners with proper HTML containers
+    const adBanners = [
+      {
+        imageUrl: 'https://img.freepik.com/free-vector/beautiful-cosmetic-ad_23-2148471068.jpg?semt=ais_hybrid&w=740',
+        title: 'Top 1% perfume',
+        clickUrl: 'https://oseff.com?ads=perfume'
+      },
+      {
+        imageUrl: 'https://marketplace.canva.com/EAGcEvo0NCs/1/0/1131w/canva-yellow-and-black-burger-promotional-poster-zO5UenmZ_fg.jpg',
+        title: 'The best of the burger',
+        clickUrl: 'https://oseff.com?ads=burger'
+      },
+      {
+        imageUrl: 'https://d3jmn01ri1fzgl.cloudfront.net/photoadking/webp_thumbnail/sky-blue-special-offer-end-of-season-advertisement-template-mhj19nd2e69bf2.webp',
+        title: 'End of season sale',
+        clickUrl: 'https://oseff.com?ads=season-sale'
+      },
+      {
+        imageUrl: 'https://img.freepik.com/free-vector/flat-design-gym-template_23-2149153194.jpg?semt=ais_hybrid&w=740',
+        title: 'Get fit now',
+        clickUrl: 'https://oseff.com?ads=gym'
+      },
+      {
+        imageUrl: 'https://img.freepik.com/free-vector/gradient-travel-sale-banner_23-2149064765.jpg?semt=ais_hybrid&w=740',
+        title: 'Travel deals',
+        clickUrl: 'https://oseff.com?ads=travel'
+      }
+    ]
+
+    // Generate ad data for each placement
+    placements.forEach((placement, index) => {
+      const adBanner = adBanners[index % adBanners.length]
+      const slotConfig = PREDEFINED_SLOTS[placement.slot_type] || { width: 300, height: 250 }
+
+      adsData[placement.selector] = {
+        id: `ad_${publisherId}_${placement.id}_${Date.now()}`,
+        publisherId,
+        placement: placement.selector,
+        slotType: placement.slot_type,
+        width: slotConfig.width,
+        height: slotConfig.height,
+        imageUrl: adBanner.imageUrl,
+        title: adBanner.title,
+        clickUrl: adBanner.clickUrl,
+        timestamp: new Date().toISOString()
+      }
+    })
+
+    console.log(`[BOT CONFIG] Generated ads data for ${placements.length} placements for publisher ${publisherId}`)
+
+    // Return configuration for the bot with all ads data included
     res.json({
       publisherId: website.publisher_id,
       website: website.url,
       placements: placements.map(p => p.selector),
       placementDetails: placements,
-      adServerUrl: 'http://localhost:8080/api/ads',
+      adsData: adsData, // Include all ads data for all placements
+      adServerUrl: 'http://localhost:8080/api/ads', // Keep for backward compatibility
       refreshInterval: 10000, // 10 seconds
       enabled: website.status === 'active'
     })
@@ -511,6 +565,8 @@ app.get('/api/bot/config/:publisherId', async (req, res) => {
 })
 
 // Ad serving endpoint with proper validation and error handling
+// NOTE: This endpoint is kept for backward compatibility, but the new implementation
+// fetches all ads data during the bot config call to reduce API requests
 app.get('/api/ads', async (req, res) => {
   const { publisherId, placement } = req.query
 

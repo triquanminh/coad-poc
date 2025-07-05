@@ -182,37 +182,33 @@ const loadAdForContainer = async (containerId, retryCount = 0) => {
     return;
   }
 
-  const retryDelay = AD_INITIAL_RETRY_DELAY * (retryCount + 1);
-
   try {
     container.element.innerHTML = '<div class="CoAd-ad-loading">Loading ad...</div>';
-    logger.log(`Loading ad for container: ${containerId} (attempt ${retryCount + 1}/${AD_MAX_LOAD_RETRIES + 1})`);
+    logger.log(`Loading ad for container: ${containerId} using pre-fetched data`);
 
-    // TODO: no need to call api here, the adData should already fetched from the api after healthcheck (only call 2 apis: 1 healthcheck, 1 fetch config with ads data)
-    // TODO: check if cookie is generated from CoAd Analysis (similar to GA), attach cookie to the Api request to fetch config (if not found, still proceed)
-    const adData = await apiClient.loadAd(tagConfig, containerId, container, AD_REQUEST_TIMEOUT);
-    logger.log(`Passing to renderAd:`, adData.ad);
+    // Get ad data from the pre-fetched config instead of making API call
+    const adData = tagConfig.adsData && tagConfig.adsData[container.placement];
 
-    adRenderer.renderAd(tagConfig, containerId, adData.ad, adContainers);
-    loadedAds.set(containerId, adData);
+    if (!adData) {
+      throw new Error(`No ad data found for placement: ${container.placement}`);
+    }
+
+    logger.log(`Using pre-fetched ad data:`, adData);
+
+    adRenderer.renderAd(tagConfig, containerId, adData, adContainers);
+    loadedAds.set(containerId, { ad: adData, success: true });
     logger.log(`Ad successfully loaded for container: ${containerId}`);
 
+    analytics.trackAdLoadSuccess(tagConfig, containerId, adData.id, 0); // 0ms since no API call
+
   } catch (error) {
-    logger.error(`Failed to load ad for container ${containerId} (attempt ${retryCount + 1}):`, error);
+    logger.error(`Failed to load ad for container ${containerId}:`, error);
+    analytics.trackAdLoadFailure(tagConfig, containerId, error, retryCount + 1);
 
-    if (retryCount < AD_MAX_LOAD_RETRIES) {
-      logger.log(`Retrying in ${retryDelay}ms...`);
-      container.element.innerHTML = `<div class="CoAd-ad-loading">Loading ad... (retry ${retryCount + 1}/${AD_MAX_LOAD_RETRIES})</div>`;
-
-      setTimeout(() => {
-        loadAdForContainer(containerId, retryCount + 1);
-      }, retryDelay);
-    } else {
-      container.element.innerHTML = `<div class="CoAd-ad-error">
-        Ad failed to load after ${AD_MAX_LOAD_RETRIES + 1} attempts<br>
-        <small>Error: ${error.message}</small>
-      </div>`;
-    }
+    container.element.innerHTML = `<div class="CoAd-ad-error">
+      Ad failed to load<br>
+      <small>Error: ${error.message}</small>
+    </div>`;
   }
 };
 

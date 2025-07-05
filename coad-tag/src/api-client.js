@@ -20,8 +20,6 @@ async function checkConnectivity(logger, config) {
   }
 }
 
-
-
 async function fetchPublisherConfigById(logger, config) {
   try {
     logger.log('Fetching publisher config by id...');
@@ -42,45 +40,8 @@ async function fetchPublisherConfigById(logger, config) {
   }
 }
 
-async function loadAd(logger, config, containerId, container, timeout = 5000) {
-  try {
-    logger.log(`Loading ad for container: ${containerId}`);
-
-    // TODO: Update Ad Serving Engine API path to get ads
-    const adUrl = `${config.apiUrl}/ads?publisherId=${encodeURIComponent(config.publisherId)}&placement=${encodeURIComponent(container.placement)}`;
-    logger.log(`Fetching ad from: ${adUrl}`);
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeout);
-
-    const response = await fetch(adUrl, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      },
-      signal: controller.signal
-    });
-
-    clearTimeout(timeoutId);
-    logger.log(`Ad request response: ${response.status} ${response.statusText}`);
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const adData = await response.json();
-    if (!adData.success || !adData.ad) {
-      throw new Error('Invalid ad data received');
-    }
-
-    logger.log(`Ad data received:`, adData);
-    return adData;
-  } catch (error) {
-    logger.error(`Failed to load ad for container ${containerId}:`, error);
-    throw error;
-  }
-}
+// Note: loadAd function removed - ads data is now fetched as part of fetchPublisherConfigById
+// This eliminates the need for separate API calls for each ad placement
 
 async function sendErrorLog(config, errorArgs, sdkInstance) {
   try {
@@ -160,7 +121,6 @@ export function createAPIClient(logger) {
   return {
     checkConnectivity: (config) => checkConnectivity(logger, config),
     fetchPublisherConfigById: (config) => fetchPublisherConfigById(logger, config),
-    loadAd: (config, containerId, container, timeout) => loadAd(logger, config, containerId, container, timeout),
     sendErrorLog: sendErrorLog
   };
 }
