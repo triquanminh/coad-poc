@@ -33,7 +33,6 @@ const setupCoAdTag = (config) => {
     ...config,
     ...(publisherIdFromURL && { publisherId: publisherIdFromURL })
   };
-
   tagConfig = createConfig(mergedConfig);
   logger = createLogger(tagConfig);
   apiClient = createAPIClient(logger);
@@ -41,9 +40,6 @@ const setupCoAdTag = (config) => {
   adRenderer = createAdRenderer(logger, analytics);
   containerManager = createContainerManager(logger, analytics);
 
-  if (publisherIdFromURL) {
-    logger.log('Publisher ID extracted from script URL:', publisherIdFromURL);
-  }
   logger.log('Configuration setup complete', tagConfig);
 };
 
@@ -75,20 +71,18 @@ const initCoAdTag = async () => {
     if (!tagConfig.publisherId) {
       throw new Error('Publisher ID is required. Please ensure the script tag includes ?publisherId=your-publisher-id parameter.');
     }
-    logger.log(`Publisher ID: ${tagConfig.publisherId}, fetching publisher config by id...`);
+
     const apiConfig = await apiClient.fetchPublisherConfigById(tagConfig);
     Object.assign(tagConfig, apiConfig);
-
     if (!tagConfig.publisherId) {
       throw new Error('Unable to get Publisher ID. Please register this website in the CoAd Publisher Dashboard');
     }
-    logger.log('Publisher config loaded:', tagConfig);
 
     await createAdContainersWithRetry();
     containerManager.injectStyles();
     containerManager.setupDOMObserver(
       tagConfig,
-      () => createAdContainers(),
+      () => containerManager.createAdContainers(tagConfig, adContainers),
       () => loadAds()
     );
 
@@ -114,7 +108,6 @@ const createAdContainersWithRetry = async () => {
     await RetryHelper.withRetry(
       (attempt) => {
         logger.log(`Creating ad containers (attempt ${attempt}/${CONTAINER_CREATION_MAX_RETRIES})`);
-
         containerManager.createAdContainers(tagConfig, adContainers);
 
         if (adContainers.size > 0) {
@@ -135,10 +128,6 @@ const createAdContainersWithRetry = async () => {
   }
 };
 
-const createAdContainers = () => {
-  containerManager.createAdContainers(tagConfig, adContainers);
-};
-
 const loadAds = async () => {
   const loadPromises = Array.from(adContainers.keys()).map(containerId =>
     loadAdForContainer(containerId)
@@ -154,7 +143,6 @@ const loadAds = async () => {
 
 const loadAdForContainer = async (containerId, retryCount = 0) => {
   const container = adContainers.get(containerId);
-
   if (!container) {
     logger.error(`Container not found: ${containerId}`);
     return;
@@ -162,23 +150,14 @@ const loadAdForContainer = async (containerId, retryCount = 0) => {
 
   try {
     container.element.innerHTML = '<div class="CoAd-ad-loading">Loading ad...</div>';
-    logger.log(`Loading ad for container: ${containerId} using pre-fetched data`);
-
-    // Get ad data from the pre-fetched config instead of making API call
     const adData = tagConfig.adsData && tagConfig.adsData[container.placement];
-
     if (!adData) {
       throw new Error(`No ad data found for placement: ${container.placement}`);
     }
 
-    logger.log(`Using pre-fetched ad data:`, adData);
-
     adRenderer.renderAd(tagConfig, containerId, adData, adContainers);
     loadedAds.set(containerId, { ad: adData, success: true });
     logger.log(`Ad successfully loaded for container: ${containerId}`);
-
-    analytics.trackAdLoadSuccess(tagConfig, containerId, adData.id, 0); // 0ms since no API call
-
   } catch (error) {
     logger.error(`Failed to load ad for container ${containerId}:`, error);
     analytics.trackAdLoadFailure(tagConfig, containerId, error, retryCount + 1);
@@ -221,7 +200,7 @@ const destroyCoAdTag = () => {
   isInitialized = false;
 };
 
-(function() {
+(function () {
   'use strict';
 
   // TODO: 2 mode for production/debug

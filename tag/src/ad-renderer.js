@@ -10,7 +10,6 @@ function renderAd(logger, analytics, config, containerId, adData, adContainers) 
   const slotType = adData.slotType || container.slotType || 'custom';
 
   logger.log(`Rendering ad for slot type: ${slotType}, dimensions: ${width}x${height}`);
-  logger.log(`Ad data received:`, adData);
   logger.log(`Checking ad data properties:`, {
     hasImageUrl: !!adData.imageUrl,
     hasTitle: !!adData.title,
@@ -70,7 +69,6 @@ function createAdIframe(adData, width, height) {
 }
 
 function createAdContent(adData, width, height) {
-  // Generate tracking pixel HTML if trackingPixel URL is provided
   const trackingPixelHtml = adData.trackingPixel
     ? `<img src="${adData.trackingPixel}" width="1" height="1" style="display:none;" alt="." />`
     : '';

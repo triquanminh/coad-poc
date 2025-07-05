@@ -1,4 +1,4 @@
-function logMessage(config, ...args) { // TODO: remove in production, check whether we need this for production? 2 version of coad tag for debug on publisher's website
+function logMessage(config, ...args) {
   if (config.debug) {
     console.log('[CoAd Tag]', ...args);
   }
