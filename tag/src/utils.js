@@ -1,46 +1,24 @@
-function logMessage(config, ...args) {
+const logMessage = (config, ...args) => {
   if (config.debug) {
     console.log('[CoAd Tag]', ...args);
   }
-}
+};
 
-function logError(...args) { // TODO: log error to api /log (fetch ad, ad impressions) -> statistic impact error only logs
+const logError = async (config, ...args) => {
   console.error('[CoAd Tag ERROR]', ...args);
-}
+};
 
-export function createLogger(config) {
+export const createLogger = (config) => {
   return {
     log: (...args) => logMessage(config, ...args),
-    error: logError
+    error: (...args) => logError(config, ...args)
   };
-}
+};
 
 export class EventDispatcher {
   static dispatch(eventName, detail) {
     const event = new CustomEvent(eventName, { detail });
     window.dispatchEvent(event);
-  }
-}
-
-export class RetryHelper {
-  static async withRetry(fn, maxRetries, initialDelay, maxDelay) {
-    let attempt = 0;
-    let delay = initialDelay;
-
-    while (attempt < maxRetries) {
-      attempt++;
-
-      try {
-        return await fn(attempt);
-      } catch (error) {
-        if (attempt >= maxRetries) {
-          throw error;
-        }
-
-        await new Promise(resolve => setTimeout(resolve, delay));
-        delay = Math.min(delay * 1.5, maxDelay);
-      }
-    }
   }
 }
 

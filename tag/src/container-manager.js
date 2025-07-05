@@ -1,6 +1,6 @@
 import { DOMUtils, BrowserUtils } from './utils.js';
 
-function createAdContainers(logger, analytics, config, adContainers) {
+const createAdContainers = (logger, analytics, config, adContainers) => {
   const placements = config.placementDetails || config.placements.map(p => ({ selector: p }));
   logger.log('Processing placements:', placements);
 
@@ -56,7 +56,7 @@ function createAdContainers(logger, analytics, config, adContainers) {
   });
 }
 
-function createCatfishAd(logger, analytics, config, placementDetail, adContainers) {
+const createCatfishAd = (logger, analytics, config, placementDetail, adContainers) => {
   const containerId = `CoAd-catfish-${config.publisherId}`;
   if (adContainers.has(containerId)) {
     logger.log('Catfish ad already exists, skipping');
@@ -86,7 +86,7 @@ function createCatfishAd(logger, analytics, config, placementDetail, adContainer
   logger.log(`Created catfish ad container: ${containerId}`);
 }
 
-function applySlotStyling(logger, container, placementDetail) {
+const applySlotStyling = (logger, container, placementDetail) => {
   const slotType = placementDetail.slot_type;
 
   if (placementDetail.width && placementDetail.height) {
@@ -132,7 +132,7 @@ function applySlotStyling(logger, container, placementDetail) {
   container.style.boxSizing = 'border-box';
 }
 
-function insertAdContainer(logger, container, targetElement, placementDetail) {
+const insertAdContainer = (logger, container, targetElement, placementDetail) => {
   const slotType = placementDetail.slot_type;
   if (slotType === 'catfish') {
     logger.log('Catfish container already appended to body');
@@ -142,7 +142,7 @@ function insertAdContainer(logger, container, targetElement, placementDetail) {
   }
 }
 
-function setupDOMObserver(logger, analytics, config, createContainersCallback, loadAdsCallback, domObserver) {
+const setupDOMObserver = (logger, analytics, config, createContainersCallback, loadAdsCallback, domObserver) => {
   // TODO: check on document ready instead, ignore dynamic content
   if (!BrowserUtils.supportsMutationObserver()) {
     logger.log('MutationObserver not supported, skipping DOM observation');
@@ -187,7 +187,7 @@ function setupDOMObserver(logger, analytics, config, createContainersCallback, l
   return observer;
 }
 
-function injectStyles() {
+const injectStyles = () => {
   const styles = `
     .CoAd-ad-container {
       margin: 0;
@@ -322,7 +322,7 @@ function injectStyles() {
   DOMUtils.injectStyles(styles);
 }
 
-function destroyDOMObserver(domObserver) {
+const destroyDOMObserver = (domObserver) => {
   if (domObserver) {
     domObserver.disconnect();
     return null;
@@ -330,7 +330,7 @@ function destroyDOMObserver(domObserver) {
   return domObserver;
 }
 
-export function createContainerManager(logger, analytics) {
+export const createContainerManager = (logger, analytics) => {
   let domObserver = null;
 
   return {
@@ -346,4 +346,4 @@ export function createContainerManager(logger, analytics) {
       domObserver = destroyDOMObserver(domObserver);
     }
   };
-}
+};

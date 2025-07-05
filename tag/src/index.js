@@ -1,14 +1,10 @@
 import {
   COAD_TAG_VERSION,
-  CONTAINER_CREATION_MAX_RETRIES,
-  CONTAINER_INITIAL_RETRY_DELAY,
-  CONTAINER_MAX_RETRY_DELAY,
   createConfig
 } from './config.js';
 import {
   createLogger,
   EventDispatcher,
-  RetryHelper,
   URLUtils
 } from './utils.js';
 import { createAPIClient } from './api-client.js';
@@ -43,22 +39,6 @@ const setupCoAdTag = (config) => {
   logger.log('Configuration setup complete', tagConfig);
 };
 
-const startInitialization = () => {
-  initCoAdTag().catch(error => {
-    console.error('[CoAd Tag] Initialization failed:', error);
-
-    if (error.message.includes('Publisher ID is required')) {
-      console.warn('[CoAd Tag] To fix this: Ensure your script tag includes the publisherId parameter');
-    } else if (error.message.includes('not found')) {
-      console.warn('[CoAd Tag] Publisher configuration not found. Please check your publisher ID or register at the CoAd publisher dashboard');
-    }
-
-    if (!error.message.includes('Publisher ID is required') && !error.message.includes('not found')) {
-      setTimeout(() => startInitialization(), 2000);
-    }
-  });
-};
-
 const initCoAdTag = async () => {
   if (isInitialized) {
     logger.log('Already initialized');
@@ -78,7 +58,7 @@ const initCoAdTag = async () => {
       throw new Error('Unable to get Publisher ID. Please register this website in the CoAd Publisher Dashboard');
     }
 
-    await createAdContainersWithRetry();
+    await createAdContainers();
     containerManager.injectStyles();
     containerManager.setupDOMObserver(
       tagConfig,
@@ -99,32 +79,22 @@ const initCoAdTag = async () => {
     });
   } catch (error) {
     logger.error('Failed to initialize:', error);
-    throw error;
   }
 };
 
-const createAdContainersWithRetry = async () => {
+const createAdContainers = async () => {
   try {
-    await RetryHelper.withRetry(
-      (attempt) => {
-        logger.log(`Creating ad containers (attempt ${attempt}/${CONTAINER_CREATION_MAX_RETRIES})`);
-        containerManager.createAdContainers(tagConfig, adContainers);
+    logger.log('Creating ad containers');
+    containerManager.createAdContainers(tagConfig, adContainers);
 
-        if (adContainers.size > 0) {
-          logger.log(`Successfully created ${adContainers.size} ad containers`);
-          return Promise.resolve();
-        } else {
-          throw new Error('No containers created');
-        }
-      },
-      CONTAINER_CREATION_MAX_RETRIES,
-      CONTAINER_INITIAL_RETRY_DELAY,
-      CONTAINER_MAX_RETRY_DELAY
-    );
-
-    await loadAds();
+    if (adContainers.size > 0) {
+      logger.log(`Successfully created ${adContainers.size} ad containers`);
+      await loadAds();
+    } else {
+      logger.error('No containers created');
+    }
   } catch (error) {
-    logger.error(`Failed to create ad containers after ${CONTAINER_CREATION_MAX_RETRIES} attempts`);
+    logger.error('Failed to create ad containers:', error);
   }
 };
 
@@ -141,7 +111,7 @@ const loadAds = async () => {
   }
 };
 
-const loadAdForContainer = async (containerId, retryCount = 0) => {
+const loadAdForContainer = async (containerId) => {
   const container = adContainers.get(containerId);
   if (!container) {
     logger.error(`Container not found: ${containerId}`);
@@ -160,7 +130,7 @@ const loadAdForContainer = async (containerId, retryCount = 0) => {
     logger.log(`Ad successfully loaded for container: ${containerId}`);
   } catch (error) {
     logger.error(`Failed to load ad for container ${containerId}:`, error);
-    analytics.trackAdLoadFailure(tagConfig, containerId, error, retryCount + 1);
+    analytics.trackAdLoadFailure(tagConfig, containerId, error);
 
     container.element.innerHTML = `<div class="CoAd-ad-error">
       Ad failed to load<br>
@@ -200,39 +170,37 @@ const destroyCoAdTag = () => {
   isInitialized = false;
 };
 
-(function () {
+(() => {
   'use strict';
 
   // TODO: 2 mode for production/debug
   window.CoAd = window.CoAd || {};
 
-  // Setup configuration and services
-  // Support both COADConfig (all caps) and CoAdConfig (mixed case) for backward compatibility
   const config = window.CoAdConfig || {};
   setupCoAdTag(config);
 
   // Strategy 1: DOM Content Loaded
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', startInitialization);
+    document.addEventListener('DOMContentLoaded', initCoAdTag);
   } else if (document.readyState === 'interactive') {
     // Strategy 2: DOM is interactive but not fully loaded
-    setTimeout(startInitialization, 500);
+    setTimeout(initCoAdTag, 500);
   } else {
     // Strategy 3: DOM is fully loaded
-    startInitialization();
+    initCoAdTag();
   }
 
   // Strategy 4: Window load event (fallback for React apps)
   window.addEventListener('load', () => {
     if (!getCoAdTagStatus().initialized) {
-      startInitialization();
+      initCoAdTag();
     }
   });
 
   // Strategy 5: Delayed initialization for React apps
   setTimeout(() => {
     if (!getCoAdTagStatus().initialized) {
-      startInitialization();
+      initCoAdTag();
     }
   }, 1000);
 

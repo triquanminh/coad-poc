@@ -831,115 +831,100 @@ app.get('/api/admin/stats', async (req, res) => {
 app.post('/api/log', async (req, res) => {
   try {
     const {
+      timestamp,
       publisherId,
-      errorType,
-      errorMessage,
-      stackTrace,
-      url,
-      userAgent,
-      sdkConfig,
-      additionalData
+      errorMessage
     } = req.body
 
     // Validate required fields
-    if (!errorType || !errorMessage) {
+    if (!errorMessage) {
       return res.status(400).json({
-        error: 'errorType and errorMessage are required',
+        error: 'errorMessage is required',
         timestamp: new Date().toISOString()
       })
     }
 
-    console.log(`[ERROR LOG] Publisher: ${publisherId || 'unknown'}, Type: ${errorType}, Message: ${errorMessage}`)
+    const logTimestamp = timestamp || new Date().toISOString()
 
-    // Log the error to database
-    const errorLogData = {
-      publisherId: publisherId || null,
-      errorType,
-      errorMessage,
-      stackTrace: stackTrace || null,
-      url: url || null,
-      userAgent: userAgent || req.headers['user-agent'] || null,
-      sdkConfig: sdkConfig || null,
-      additionalData: additionalData || null
-    }
-
-    const result = await db.logError(errorLogData)
-
-    console.log(`[ERROR LOG] Successfully logged error with ID: ${result.id}`)
+    // Log to console with requested format: timestamp, publisher id, error message, type
+    console.log(`[ERROR LOG] ${logTimestamp} | Type: coad-tag-error | Publisher: ${publisherId || 'unknown'} | Message: ${errorMessage}`)
 
     res.json({
       success: true,
-      errorLogId: result.id,
-      timestamp: new Date().toISOString()
+      message: 'Error logged to console',
+      timestamp: logTimestamp
     })
 
   } catch (error) {
-    console.error('[ERROR LOG] Failed to log error:', error.message)
+    const errorTimestamp = new Date().toISOString()
+    console.error(`[ERROR LOG] ${errorTimestamp} | Publisher: unknown | Message: Failed to log error: ${error.message} | Type: log-error`)
     res.status(500).json({
       error: 'Failed to log error',
       message: error.message,
-      timestamp: new Date().toISOString()
+      timestamp: errorTimestamp
     })
   }
 })
 
-// Get error logs (all or by publisher)
+// Get error logs (console only - no database storage)
 app.get('/api/logs', async (req, res) => {
   try {
-    const { publisherId, limit = 50 } = req.query
+    const { publisherId } = req.query
+    const timestamp = new Date().toISOString()
 
-    let logs
-    if (publisherId) {
-      logs = await db.getErrorLogsByPublisher(publisherId, parseInt(limit))
-    } else {
-      logs = await db.getErrorLogs(parseInt(limit))
-    }
+    // Log the request to console with requested format: timestamp, publisher id, message, type
+    console.log(`[LOG REQUEST] ${timestamp} | Publisher: ${publisherId || 'all'} | Message: Error logs requested | Type: log-request`)
 
     res.json({
       success: true,
-      logs,
-      count: logs.length,
-      timestamp: new Date().toISOString()
+      message: 'Error logs are saved successfully',
+      publisherId: publisherId || 'all',
+      timestamp
     })
 
   } catch (error) {
-    console.error('Error fetching error logs:', error.message)
+    const timestamp = new Date().toISOString()
+    console.error(`[LOG REQUEST ERROR] ${timestamp} | Publisher: unknown | Message: ${error.message} | Type: log-request-error`)
     res.status(500).json({
-      error: 'Failed to fetch error logs',
+      error: 'Failed to process log request',
       message: error.message,
-      timestamp: new Date().toISOString()
+      timestamp
     })
   }
 })
 
-// Get error logs by time range
+// Get error logs by time range (console only - no database storage)
 app.get('/api/logs/range', async (req, res) => {
   try {
-    const { startDate, endDate, limit = 100 } = req.query
+    const { startDate, endDate } = req.query
+    const timestamp = new Date().toISOString()
 
     if (!startDate || !endDate) {
+      console.log(`[LOG RANGE REQUEST ERROR] ${timestamp} | Publisher: unknown | Message: startDate and endDate are required | Type: log-range-request-error`)
       return res.status(400).json({
         error: 'startDate and endDate are required',
-        timestamp: new Date().toISOString()
+        timestamp
       })
     }
 
-    const logs = await db.getErrorLogsByTimeRange(startDate, endDate, parseInt(limit))
+    // Log the request to console with requested format: timestamp, publisher id, message, type
+    console.log(`[LOG RANGE REQUEST] ${timestamp} | Publisher: unknown | Message: Error logs by time range requested (${startDate} to ${endDate}) | Type: log-range-request`)
 
     res.json({
       success: true,
-      logs,
-      count: logs.length,
+      message: 'Error logs are only available in console output. Check server console for logged errors.',
+      note: 'This endpoint no longer stores logs in database - all errors are logged to console only',
       dateRange: { startDate, endDate },
-      timestamp: new Date().toISOString()
+      timestamp
     })
 
   } catch (error) {
-    console.error('Error fetching error logs by time range:', error.message)
+    const timestamp = new Date().toISOString()
+    console.error(`[LOG RANGE REQUEST ERROR] ${timestamp} | Publisher: unknown | Message: ${error.message} | Type: log-range-request-error`)
     res.status(500).json({
-      error: 'Failed to fetch error logs by time range',
+      error: 'Failed to process log range request',
       message: error.message,
-      timestamp: new Date().toISOString()
+      timestamp
     })
   }
 })
@@ -967,9 +952,9 @@ app.listen(PORT, () => {
   console.log('- GET  /api/publisher/:id/placements - Get ad placements')
   console.log('- GET  /api/bot/config/:id - Get bot config')
   console.log('- GET  /api/ads - Serve ads')
-  console.log('- POST /api/log - Log SDK errors')
-  console.log('- GET  /api/logs - Get error logs (all or by publisherId)')
-  console.log('- GET  /api/logs/range - Get error logs by time range')
+  console.log('- POST /api/log - Log SDK errors (console only)')
+  console.log('- GET  /api/logs - Get error logs info (console only - no database)')
+  console.log('- GET  /api/logs/range - Get error logs by time range info (console only)')
   console.log('- GET  /api/admin/publishers - Admin: Get all publishers')
   console.log('- DELETE /api/admin/publishers/:id - Admin: Delete publisher')
   console.log('- GET  /api/admin/stats - Admin: Dashboard statistics')

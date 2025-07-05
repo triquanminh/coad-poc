@@ -1,4 +1,4 @@
-function renderAd(logger, analytics, config, containerId, adData, adContainers) {
+const renderAd = (logger, analytics, config, containerId, adData, adContainers) => {
   const container = adContainers.get(containerId);
 
   if (!container || !adData) {
@@ -40,9 +40,9 @@ function renderAd(logger, analytics, config, containerId, adData, adContainers) 
     logger.log('Adding toggle button to catfish ad after rendering');
     addCatfishToggleButton(logger, analytics, config, container.element);
   }
-}
+};
 
-function createAdIframe(adData, width, height) {
+const createAdIframe = (adData, width, height) => {
   const iframe = document.createElement('iframe');
   iframe.className = 'CoAd-ad-iframe';
   iframe.setAttribute('data-ad-id', adData.id);
@@ -66,9 +66,9 @@ function createAdIframe(adData, width, height) {
   `;
 
   return iframe;
-}
+};
 
-function createAdContent(adData, width, height) {
+const createAdContent = (adData, width, height) => {
   const trackingPixelHtml = adData.trackingPixel
     ? `<img src="${adData.trackingPixel}" width="1" height="1" style="display:none;" alt="." />`
     : '';
@@ -183,7 +183,7 @@ The behavior of each ad types:
 TODO: CatFish should open the target advertiser websites when first click on minimize
 The instruction should be defined by API (number of seconds, delay, ...)
  */
-function addCatfishToggleButton(logger, analytics, config, container) {
+const addCatfishToggleButton = (logger, analytics, config, container) => {
   logger.log('Creating catfish toggle button for container:', container.id);
   let isMinimized = false;
 
@@ -236,11 +236,11 @@ function addCatfishToggleButton(logger, analytics, config, container) {
   logger.log('Catfish toggle button added successfully');
 }
 
-export function createAdRenderer(logger, analytics) {
+export const createAdRenderer = (logger, analytics) => {
   return {
     renderAd: (config, containerId, adData, adContainers) => renderAd(logger, analytics, config, containerId, adData, adContainers),
     createAdIframe: createAdIframe,
     createAdContent: createAdContent,
     addCatfishToggleButton: (config, container) => addCatfishToggleButton(logger, analytics, config, container)
   };
-}
+};
