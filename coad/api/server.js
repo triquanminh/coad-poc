@@ -479,69 +479,9 @@ app.get('/api/publisher/:publisherId', async (req, res) => {
 
 
 
-// Bot configuration endpoint by domain (for AdSDK auto-detection)
-app.get('/api/bot/config-by-domain', async (req, res) => {
-  const { domain, url } = req.query
 
-  if (!domain && !url) {
-    return res.status(400).json({ error: 'Domain or URL parameter is required' })
-  }
 
-  try {
-    console.log(`[SDK CONFIG] Looking up config for domain: ${domain || url}`)
-
-    // Try to find website by exact URL match first
-    let website = null
-    if (url) {
-      website = await db.getWebsiteByUrl(url)
-    }
-
-    // If not found by exact URL, try to find by domain
-    if (!website && domain) {
-      const websites = await db.getAllWebsites()
-      website = websites.find(w => {
-        try {
-          const websiteUrl = new URL(w.url)
-          const websiteDomain = websiteUrl.hostname
-          return websiteDomain === domain || websiteDomain === `www.${domain}` || domain === `www.${websiteDomain}`
-        } catch (e) {
-          return false
-        }
-      })
-    }
-
-    if (!website) {
-      console.log(`[SDK CONFIG] No configuration found for domain: ${domain || url}`)
-      return res.status(404).json({
-        error: 'No publisher configuration found for this domain',
-        domain: domain || url,
-        suggestion: 'Please register this website in the COAD publisher dashboard'
-      })
-    }
-
-    const placements = await db.getAdPlacementsByPublisherId(website.publisher_id)
-
-    console.log(`[SDK CONFIG] Found config for ${website.url} (Publisher: ${website.publisher_id})`)
-
-    // Return configuration for the bot
-    res.json({
-      publisherId: website.publisher_id,
-      website: website.url,
-      placements: placements.map(p => p.selector),
-      placementDetails: placements,
-      adServerUrl: 'http://localhost:8080/api/ads',
-      refreshInterval: 10000, // 10 seconds
-      enabled: website.status === 'active',
-      autoDetected: true,
-      matchedBy: url ? 'exact-url' : 'domain'
-    })
-  } catch (error) {
-    console.error('Error fetching bot config by domain:', error.message)
-    res.status(500).json({ error: 'Failed to fetch bot configuration' })
-  }
-})
-
-// Bot configuration endpoint (for AdSDK) - Legacy support
+// Bot configuration endpoint (for AdSDK)
 app.get('/api/bot/config/:publisherId', async (req, res) => {
   const { publisherId } = req.params
 
@@ -962,8 +902,7 @@ app.listen(PORT, () => {
   console.log('- DELETE /api/publisher/:id - Delete publisher')
   console.log('- POST /api/publisher/:id/placements - Add ad placement')
   console.log('- GET  /api/publisher/:id/placements - Get ad placements')
-  console.log('- GET  /api/bot/config-by-domain - Auto-detect config by domain')
-  console.log('- GET  /api/bot/config/:id - Get bot config (legacy)')
+  console.log('- GET  /api/bot/config/:id - Get bot config')
   console.log('- GET  /api/ads - Serve ads')
   console.log('- POST /api/log - Log SDK errors')
   console.log('- GET  /api/logs - Get error logs (all or by publisherId)')

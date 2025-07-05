@@ -1,11 +1,11 @@
 function logMessage(config, ...args) { // TODO: remove in production, check whether we need this for production? 2 version of coad tag for debug on publisher's website
   if (config.debug) {
-    console.log('[CoAd SDK]', ...args);
+    console.log('[CoAd Tag]', ...args);
   }
 }
 
 function logError(...args) { // TODO: log error to api /log (fetch ad, ad impressions) -> statistic impact error only logs
-  console.error('[CoAd SDK ERROR]', ...args);
+  console.error('[CoAd Tag ERROR]', ...args);
 }
 
 export function createLogger(config) {
@@ -81,6 +81,46 @@ export class URLUtils {
 
   static getCurrentURL() {
     return window.location.href;
+  }
+
+  static getScriptSrcURL() {
+    // Find the current script tag that loaded this module
+    const scripts = document.querySelectorAll('script[src*="index.js"], script[src*="adsdk.js"], script[src*="coad-tag"]');
+
+    // Look for the script that contains our tag
+    for (const script of scripts) {
+      const src = script.getAttribute('src');
+      if (src && (src.includes('index.js') || src.includes('adsdk.js') || src.includes('coad-tag'))) {
+        return src;
+      }
+    }
+
+    // Fallback: try to get from import.meta.url if available
+    try {
+      if (import.meta && import.meta.url) {
+        return import.meta.url;
+      }
+    } catch (error) {
+      // import.meta not available in this context
+    }
+
+    return null;
+  }
+
+  static getPublisherIdFromScriptURL() {
+    const scriptSrc = this.getScriptSrcURL();
+
+    if (!scriptSrc) {
+      return null;
+    }
+
+    try {
+      const url = new URL(scriptSrc, window.location.origin);
+      return url.searchParams.get('publisherId');
+    } catch (error) {
+      console.warn('[CoAd SDK] Failed to parse script URL:', error);
+      return null;
+    }
   }
 }
 

@@ -20,37 +20,7 @@ async function checkConnectivity(logger, config) {
   }
 }
 
-async function fetchPublisherConfigByDomain(logger, config) {
-  try {
-    logger.log('Current domain:', URLUtils.getCurrentDomain());
-    logger.log('Current URL:', URLUtils.getCurrentOrigin());
 
-    // TODO: Update query params to call Ad Serving Engine API
-    const params = URLUtils.buildQueryString({
-      domain: URLUtils.getCurrentDomain(),
-      url: URLUtils.getCurrentOrigin()
-    });
-
-    // TODO: Update Ad Serving Engine API path to get publisher's config by domain
-    const response = await fetch(`${config.apiUrl}/bot/config-by-domain?${params}`);
-
-    if (!response.ok) {
-      if (response.status === 404) {
-        const errorData = await response.json();
-        throw new Error(`Website not registered: ${errorData.error}. ${errorData.suggestion || ''}`);
-      }
-      throw new Error(`Failed to fetch publisher config by domain: ${response.status}`);
-    }
-
-    const apiConfig = await response.json();
-    logger.log('Received publisher config from Ad Serving Engine:', apiConfig);
-
-    return apiConfig;
-  } catch (error) {
-    logger.error('Failed to fetch publisher config by domain:', error);
-    throw error;
-  }
-}
 
 async function fetchPublisherConfigById(logger, config) {
   try {
@@ -189,7 +159,6 @@ async function sendErrorLog(config, errorArgs, sdkInstance) {
 export function createAPIClient(logger) {
   return {
     checkConnectivity: (config) => checkConnectivity(logger, config),
-    fetchPublisherConfigByDomain: (config) => fetchPublisherConfigByDomain(logger, config),
     fetchPublisherConfigById: (config) => fetchPublisherConfigById(logger, config),
     loadAd: (config, containerId, container, timeout) => loadAd(logger, config, containerId, container, timeout),
     sendErrorLog: sendErrorLog

@@ -72,10 +72,10 @@
 <div class="tab-content" id="docs-tab">
     <h2>Integration Code</h2>
     <p>Add this script tag to your website:</p>
-    <pre><code>&lt;script src="https://your-cloudfront-url.com/coad-tag.js" async&gt;&lt;/script&gt;</code></pre>
+    <pre><code>&lt;script src="https://your-cloudfront-url.com/coad-tag.js?publisherId=your-publisher-id" async&gt;&lt;/script&gt;</code></pre>
 
     <h2>Local Development</h2>
-    <pre><code>&lt;script src="http://localhost:4001/src/index.js" type="module" async&gt;&lt;/script&gt;</code></pre>
+    <pre><code>&lt;script src="http://localhost:4001/src/index.js?publisherId=your-publisher-id" type="module" async&gt;&lt;/script&gt;</code></pre>
 
     <h2>API Reference</h2>
     <p>The Tag exposes the following methods via the global <code>window.CoAd.tag</code> object:</p>
@@ -107,7 +107,7 @@
   // Configure SDK for testing
   window.COADConfig = {
     debug: true,
-    publisherId: 'test-publisher',
+    // publisherId is required and extracted from script URL parameter
     placements: ['#ad-container']
   };
 
@@ -123,7 +123,7 @@
 </script>
 
 <!-- During development, this loads the SDK from src/ -->
-<script type="module" src="/src/index.js"></script>
+<script type="module" src="/src/index.js?publisherId=pub_50hc0uhha"></script>
 
 <script>
   // Display Tag status after loading

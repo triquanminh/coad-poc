@@ -132,7 +132,8 @@ function WebsiteCard({ website, onEdit, onDelete, onHealthUpdate }) {
   }
 
   const copySDKCode = () => {
-    const sdkCode = `<script src="http://localhost:4001/adsdk.js" async></script>`
+    const publisherId = website?.publisher_id || website?.publisherId
+    const sdkCode = `<script src="http://localhost:4001/src/index.js?publisherId=${publisherId}" type="module" async></script>`
 
     navigator.clipboard.writeText(sdkCode)
     alert('SDK code copied to clipboard!')
@@ -1100,7 +1101,8 @@ function SDKIntegration({ website }) {
     }
   }
 
-  const sdkScript = `<script src="http://localhost:4001/adsdk.js" async></script>`
+  const publisherId = website?.publisher_id || website?.publisherId
+  const sdkScript = `<script src="http://localhost:4001/src/index.js?publisherId=${publisherId}" type="module" async></script>`
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(sdkScript)

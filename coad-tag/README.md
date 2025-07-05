@@ -104,13 +104,13 @@ VITE_COAD_TAG_VERSION=0.1.0
 ### Basic Integration
 ```html
 <!-- Running Development Build Locally -->
-<script src="http://localhost:4001/src/index.js" type="module" async></script>
+<script src="http://localhost:4001/src/index.js?publisherId=your-publisher-id" type="module" async></script>
 
 <!-- Running Production Build Locally -->
-<script src="http://localhost:4001/coad-tag.dev.js" async></script>
+<script src="http://localhost:4001/coad-tag.dev.js?publisherId=your-publisher-id" async></script>
 
 <!-- Production Deployment -->
-<script src="https://your-cloudfront-url.com/coad-tag.js" async></script>
+<script src="https://your-cloudfront-url.com/coad-tag.js?publisherId=your-publisher-id" async></script>
 ```
 
 > **Note**:
@@ -119,13 +119,18 @@ VITE_COAD_TAG_VERSION=0.1.0
 > - **Production Build** (`npm run build:prod`): Uses production config with maximum optimization
 
 ### Configuration
+
+The publisher ID is **required** and must be provided as a URL parameter in the script tag. You can also provide additional configuration:
+
 ```javascript
 window.COADConfig = {
   debug: false,
-  publisherId: 'your-publisher-id',
+  // publisherId is automatically extracted from script URL (required)
   placements: ['.ad-placement', '#sidebar-ad']
 };
 ```
+
+**Important**: The `publisherId` parameter in the script URL is **required**. The tag will not initialize without it.
 
 ### API Usage
 ```javascript
