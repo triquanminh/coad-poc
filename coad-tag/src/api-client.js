@@ -1,9 +1,8 @@
 async function checkConnectivity(logger, config) {
   try {
     logger.log('Health checking Ad Serving Engine...');
-    // TODO: Update Ad Serving Engine health check endpoint
     const response = await fetch(`${config.apiUrl.replace('/api', '')}/health`, {
-      method: 'GET', // TODO: change to OPTION
+      method: 'OPTIONS',
       headers: { 'Accept': 'application/json' }
     });
 

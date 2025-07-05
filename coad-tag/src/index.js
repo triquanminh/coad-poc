@@ -70,7 +70,6 @@ const initCoAdTag = async () => {
   }
 
   initStartTime = Date.now();
-
   try {
     await apiClient.checkConnectivity(tagConfig);
     if (!tagConfig.publisherId) {
