@@ -1,19 +1,113 @@
 # COAD Demo Workspace
 
-This workspace contains multiple applications for the COAD advertising platform demo.
+This workspace contains multiple applications for the COAD advertising platform demo with complete ad impression tracking.
 
-## Structure
+## System Architecture
 
 ```
 /
 ├── publishers/         # Static websites (ports 3000, 3001, 3002...)
 │   └── portfolio/      # Portfolio website (port 3000) ✅
-├── coad/              # Main platform
-│   ├── platform/      # Publisher dashboard (port 4000) ✅
-│   ├── api/           # Backend API server (port 8080) ✅
-│   └── admin/         # Admin dashboard (port 4002) ✅
-└── bot/               # adSdk for injection into publisher sites (port 4001) ✅
+├── platform/          # Publisher dashboard (port 4000) ✅
+├── ad-serving-engine/  # Backend API server (port 8080) ✅
+├── admin/             # Admin dashboard (port 4002) ✅
+├── tag/               # AdSDK for injection into publisher sites (port 4001) ✅
+└── tracking/          # Impression tracking server (port 3002) ✅
+    ├── DynamoDB Local (port 8000)
+    └── Admin UI (port 8001)
 ```
+
+## COAD Tracking System
+
+The COAD tracking system provides comprehensive ad impression tracking with:
+
+1. **COAD Tracking Server** (`tracking/`) - Node.js server that handles impression tracking
+2. **COAD Ad Serving Engine** (`ad-serving-engine/`) - Updated to include tracking pixel URLs in ad configurations
+3. **COAD Tag** (`tag/`) - Updated to embed tracking pixels in ad iframes
+4. **DynamoDB Local** - Local database for storing impression data
+
+### Tracking Data Flow
+
+```
+Publisher Website
+    ↓ (loads ad)
+COAD Tag → Ad Serving Engine → Returns ad config with trackingPixel URL
+    ↓ (renders ad with pixel)
+Ad Iframe → Tracking Server → Logs to DynamoDB
+```
+
+## Quick Start - Tracking System
+
+### 1. Install COAD Tracking Server
+
+```bash
+# Navigate to tracking server directory
+cd tracking
+
+# Install dependencies
+npm install
+
+# Install DynamoDB Local
+npm run install-dynamodb
+```
+
+### 2. Setup Database Tables
+
+```bash
+cd tracking
+
+# Create the AdImpressionEvents table
+npm run setup-dynamodb
+```
+
+### 3. Start All Tracking Services
+
+**One Command Setup (Recommended):**
+```bash
+cd tracking
+npm run dev
+```
+
+This starts:
+- 🔵 **DynamoDB Local** (port 8000)
+- 🟢 **Admin UI** (port 8001)
+- 🟡 **Tracking Server** (port 3002)
+
+**Individual Services:**
+```bash
+# Start individual services
+npm run dev-tracking      # Tracking server only
+npm run dev-dynamodb       # DynamoDB Local only
+npm run dev-dynamodb-ui    # Admin UI only
+```
+
+### 4. Start Ad Serving Engine
+
+```bash
+cd ad-serving-engine
+npm start    # Runs on port 8080
+```
+
+### 5. Test the System
+
+```bash
+cd tracking
+
+# Run automated tests
+npm test
+
+# Or test impression tracking manually
+npm run test-impression
+
+# View impression data
+npm run view-impressions
+```
+
+### 6. Access UIs
+
+- **DynamoDB Admin UI**: http://localhost:8001
+- **Tracking Server**: http://localhost:3002
+- **Ad Serving Engine**: http://localhost:8080
 
 ## Portfolio Website (Port 3000)
 
@@ -57,17 +151,17 @@ A comprehensive publisher management interface built with React and Express API.
 ### Running the COAD Platform
 ```bash
 # Frontend (React)
-cd coad/platform
+cd platform
 npm install
 npm run dev  # Runs on http://localhost:4000
 
 # Backend API
-cd coad/api
+cd ad-serving-engine
 npm install
 npm start    # Runs on http://localhost:8080
 
 # Admin Dashboard
-cd coad/admin
+cd admin
 npm install
 npm run dev  # Runs on http://localhost:4002
 ```
@@ -110,7 +204,7 @@ Advanced JavaScript SDK for automatic ad injection and management.
 
 ### Running the AdSDK
 ```bash
-cd bot
+cd tag
 npm install
 npm start    # Runs on http://localhost:4001
 ```
@@ -205,20 +299,23 @@ Publishers now only need **one line** of code:
 
 1. **Start all services**:
    ```bash
-   # Terminal 1: Portfolio
+   # Terminal 1: Tracking System (DynamoDB + Admin UI + Tracking Server)
+   cd tracking && npm run dev
+
+   # Terminal 2: Portfolio
    cd publishers/portfolio && npm run dev
 
-   # Terminal 2: COAD Platform
-   cd coad/platform && npm run dev
+   # Terminal 3: COAD Platform
+   cd platform && npm run dev
 
-   # Terminal 3: API Server
-   cd coad/api && npm start
+   # Terminal 4: Ad Serving Engine
+   cd ad-serving-engine && npm start
 
-   # Terminal 4: AdSDK Server
-   cd bot && npm start
+   # Terminal 5: AdSDK Server
+   cd tag && npm start
 
-   # Terminal 5: Admin Dashboard
-   cd coad/admin && npm run dev
+   # Terminal 6: Admin Dashboard
+   cd admin && npm run dev
    ```
 
 2. **Register Portfolio Website**:
@@ -266,6 +363,66 @@ The system uses SQLite with the following tables:
 - `error_message` - Error details (if any)
 - `checked_at` - Check timestamp
 
+### `ad_impression_events` (DynamoDB)
+- `impressionId` (String) - Unique impression identifier (Primary Key)
+- `timestamp` (String) - ISO timestamp (Sort Key)
+- `adId` (String) - Ad identifier
+- `slot` (String) - Ad placement/slot
+- `publisherId` (String) - Publisher identifier
+- `refererUrl` (String) - URL where impression occurred
+- `ip` (String) - Client IP address
+- `userAgent` (String) - Client user agent
+- `createdAt` (String) - Creation timestamp
+
+**Global Secondary Indexes:**
+- `AdIdIndex` - Query by adId + timestamp
+- `PublisherIdIndex` - Query by publisherId + timestamp
+
+## Viewing Impression Data
+
+### Option 1: DynamoDB Admin UI (Recommended)
+
+Start the web-based admin interface:
+```bash
+cd tracking
+npm run dev-dynamodb-ui
+```
+
+Then open http://localhost:8001 in your browser to:
+- Browse tables and data
+- Run queries and scans
+- View table schemas
+- Export data
+
+### Option 2: Command Line Viewer
+
+View impressions directly in the terminal:
+```bash
+cd tracking
+
+# View all recent impressions
+npm run view-impressions
+
+# View impressions for a specific ad
+node scripts/view-impressions.js ad test_ad_123
+
+# View impressions for a specific publisher
+node scripts/view-impressions.js publisher test_pub_456
+
+# View more impressions (default is 20)
+node scripts/view-impressions.js all 50
+```
+
+### Option 3: AWS CLI (if installed)
+
+```bash
+# List all tables
+aws dynamodb list-tables --endpoint-url http://localhost:8000
+
+# Scan table data
+aws dynamodb scan --table-name AdImpressionEvents --endpoint-url http://localhost:8000
+```
+
 ## API Endpoints
 
 ### Publisher Management (Unified API)
@@ -283,6 +440,11 @@ The system uses SQLite with the following tables:
 ### Bot Configuration
 - `GET /api/bot/config-by-domain` - Auto-detect publisher config by domain (NEW!)
 - `GET /api/bot/config/:publisherId` - Get bot configuration for publisher (legacy)
+
+### Tracking Server (Port 3002)
+- `GET /health` - Health check
+- `GET /track/impression` - Track impression (returns 1x1 pixel)
+- `GET /stats` - Get tracking statistics
 
 ### System Status
 - `GET /health` - API health check
@@ -316,20 +478,26 @@ curl -X DELETE http://localhost:8080/api/admin/publishers/{publisherId}
 
 ## Current Status
 - ✅ Portfolio Website (Port 3000)
-- ✅ MyNewOne Publisher Website (Port 3001) - NEW!
+- ✅ MyNewOne Publisher Website (Port 3001)
 - ✅ COAD Platform Frontend (Port 4000)
-- ✅ COAD API Backend (Port 8080)
+- ✅ COAD Ad Serving Engine (Port 8080)
 - ✅ AdSDK Server (Port 4001)
 - ✅ Admin Dashboard (Port 4002)
+- ✅ **COAD Tracking Server (Port 3002)** - NEW!
+- ✅ **DynamoDB Local (Port 8000)** - NEW!
+- ✅ **DynamoDB Admin UI (Port 8001)** - NEW!
 - ✅ SQLite Database with Full Schema
+- ✅ **DynamoDB Impression Tracking** - NEW!
 - ✅ Complete Integration Workflow
 - ✅ Automated Health Checks
 - ✅ Persistent Ad Placement Storage
 - ✅ DOM-based Ad Placement
 - ✅ Real-time Ad Serving
+- ✅ **Pixel-based Impression Tracking** - NEW!
 - ✅ Database-driven Publisher Management
 - ✅ Admin Interface for Database Management
-- ✅ Zero-Configuration AdSDK with Auto-Detection - NEW!
+- ✅ Zero-Configuration AdSDK with Auto-Detection
+- ✅ **Comprehensive Data Viewing Tools** - NEW!
 
 ## Admin Dashboard Usage
 
