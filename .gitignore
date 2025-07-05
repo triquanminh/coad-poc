@@ -175,3 +175,7 @@ publishers/portfolio/dist/
 config/local.json
 config/development.json
 config/production.json
+
+# DynamoDB Local files (COAD Tracking)
+coad/coad-tracking/dynamodb-local/
+coad/coad-tracking/shared-local-instance.db

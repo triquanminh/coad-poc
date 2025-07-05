@@ -535,9 +535,10 @@ app.get('/api/bot/config/:publisherId', async (req, res) => {
     placements.forEach((placement, index) => {
       const adBanner = adBanners[index % adBanners.length]
       const slotConfig = PREDEFINED_SLOTS[placement.slot_type] || { width: 300, height: 250 }
+      const adId = `ad_${publisherId}_${placement.id}_${Date.now()}`
 
       adsData[placement.selector] = {
-        id: `ad_${publisherId}_${placement.id}_${Date.now()}`,
+        id: adId,
         publisherId,
         placement: placement.selector,
         slotType: placement.slot_type,
@@ -546,6 +547,7 @@ app.get('/api/bot/config/:publisherId', async (req, res) => {
         imageUrl: adBanner.imageUrl,
         title: adBanner.title,
         clickUrl: adBanner.clickUrl,
+        trackingPixel: `http://localhost:3002/track/impression?adId=${adId}&slot=${encodeURIComponent(placement.selector)}&publisherId=${publisherId}`,
         timestamp: new Date().toISOString()
       }
     })

@@ -70,6 +70,11 @@ function createAdIframe(adData, width, height) {
 }
 
 function createAdContent(adData, width, height) {
+  // Generate tracking pixel HTML if trackingPixel URL is provided
+  const trackingPixelHtml = adData.trackingPixel
+    ? `<img src="${adData.trackingPixel}" width="1" height="1" style="display:none;" alt="." />`
+    : '';
+
   // TODO: check if the body, head tag can be removed
   return `
     <!DOCTYPE html>
@@ -155,6 +160,7 @@ function createAdContent(adData, width, height) {
         <div class="ad-overlay">${adData.title}</div>
         <div class="ad-info-icon" onclick="toggleInfo(event)">i</div>
       </div>
+      ${trackingPixelHtml}
 
       <script>
         function toggleInfo(event) {
