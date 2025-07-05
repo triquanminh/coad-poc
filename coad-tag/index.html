@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>COAD SDK Development</title>
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .container {
+            border: 1px solid #ccc;
+            padding: 1rem;
+            margin: 1rem 0;
+            min-height: 200px;
+        }
+        pre {
+            background: #f5f5f5;
+            padding: 1rem;
+            overflow-x: auto;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 1rem;
+        }
+        .tab {
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            border-bottom: none;
+            background: #f5f5f5;
+        }
+        .tab.active {
+            background: white;
+            font-weight: bold;
+        }
+        .tab-content {
+            display: none;
+            border: 1px solid #ccc;
+            padding: 1rem;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+<h1>COAD Tag Development Environment</h1>
+
+<div class="tabs">
+    <div class="tab active" data-tab="test">Test Environment</div>
+    <div class="tab" data-tab="docs">Documentation</div>
+    <div class="tab" data-tab="health">Health Check</div>
+</div>
+
+<div class="tab-content active" id="test-tab">
+    <h2>Test Container</h2>
+    <div id="ad-container" class="container"></div>
+
+    <h2>Tag Status</h2>
+    <pre id="sdk-status">Loading...</pre>
+
+    <h2>Tag Controls</h2>
+    <button id="refresh-btn">Refresh Ads</button>
+    <button id="reinit-btn">Reinitialize Tag</button>
+    <button id="destroy-btn">Destroy Tag</button>
+</div>
+
+<div class="tab-content" id="docs-tab">
+    <h2>Integration Code</h2>
+    <p>Add this script tag to your website:</p>
+    <pre><code>&lt;script src="https://your-cloudfront-url.com/coad-tag.js" async&gt;&lt;/script&gt;</code></pre>
+
+    <h2>Local Development</h2>
+    <pre><code>&lt;script src="http://localhost:4001/src/index.js" type="module" async&gt;&lt;/script&gt;</code></pre>
+
+    <h2>API Reference</h2>
+    <p>The Tag exposes the following methods via the global <code>window.CoAd.tag</code> object:</p>
+    <ul>
+        <li><code>refresh()</code> - Refresh all ads</li>
+        <li><code>forceReinit()</code> - Reinitialize the Tag</li>
+        <li><code>getStatus()</code> - Get Tag status</li>
+        <li><code>destroy()</code> - Remove the Tag</li>
+    </ul>
+</div>
+
+<div class="tab-content" id="health-tab">
+    <h2>Health Check</h2>
+    <pre id="health-status">Loading health information...</pre>
+</div>
+
+<script>
+  // Tab functionality
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+      tab.classList.add('active');
+      document.getElementById(`${tab.dataset.tab}-tab`).classList.add('active');
+    });
+  });
+
+  // Configure SDK for testing
+  window.COADConfig = {
+    debug: true,
+    publisherId: 'test-publisher',
+    placements: ['#ad-container']
+  };
+
+  // Health check simulation
+  setTimeout(() => {
+    document.getElementById('health-status').textContent = JSON.stringify({
+      status: 'healthy',
+      service: 'COAD AdSDK',
+      version: '1.0.0',
+      timestamp: new Date().toISOString()
+    }, null, 2);
+  }, 500);
+</script>
+
+<!-- During development, this loads the SDK from src/ -->
+<script type="module" src="/src/index.js"></script>
+
+<script>
+  // Display Tag status after loading
+  setTimeout(() => {
+    if (window.CoAd && window.CoAd.tag) {
+      const status = window.CoAd.tag.getStatus();
+      document.getElementById('sdk-status').textContent = JSON.stringify(status, null, 2);
+
+      // Set up buttons
+      document.getElementById('refresh-btn').addEventListener('click', () => {
+        window.CoAd.tag.refresh();
+        setTimeout(updateStatus, 500);
+      });
+
+      document.getElementById('reinit-btn').addEventListener('click', () => {
+        window.CoAd.tag.forceReinit();
+        setTimeout(updateStatus, 500);
+      });
+
+      document.getElementById('destroy-btn').addEventListener('click', () => {
+        window.CoAd.tag.destroy();
+        document.getElementById('sdk-status').textContent = 'Tag destroyed';
+      });
+    } else {
+      document.getElementById('sdk-status').textContent = 'SDK not initialized';
+    }
+  }, 1000);
+
+  function updateStatus() {
+    if (window.CoAd && window.CoAd.tag) {
+      const status = window.CoAd.tag.getStatus();
+      document.getElementById('sdk-status').textContent = JSON.stringify(status, null, 2);
+    }
+  }
+</script>
+</body>
+</html>
