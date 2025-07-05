@@ -1,16 +1,5 @@
 import { EventDispatcher } from './utils.js';
 
-function trackImpression(logger, config, adId, containerId) {
-  logger.log(`Ad impression: ${adId} in ${containerId}`);
-
-  EventDispatcher.dispatch('CoAd:impression', {
-    adId,
-    containerId,
-    publisherId: config.publisherId,
-    timestamp: new Date().toISOString()
-  });
-}
-
 function trackClick(logger, config, adId, containerId) {
   logger.log(`Ad click: ${adId} in ${containerId}`);
 
@@ -80,7 +69,6 @@ function trackPerformance(logger, config, metric, value, context = {}) {
 
 export function createAnalytics(logger) {
   return {
-    trackImpression: (config, adId, containerId) => trackImpression(logger, config, adId, containerId),
     trackClick: (config, adId, containerId) => trackClick(logger, config, adId, containerId),
     trackEvent: (config, eventName, eventData) => trackEvent(logger, config, eventName, eventData),
     trackContainerCreated: (config, containerId, placement, slotType) => trackContainerCreated(logger, config, containerId, placement, slotType),

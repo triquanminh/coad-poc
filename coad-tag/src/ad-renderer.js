@@ -41,9 +41,6 @@ function renderAd(logger, analytics, config, containerId, adData, adContainers) 
     logger.log('Adding toggle button to catfish ad after rendering');
     addCatfishToggleButton(logger, analytics, config, container.element);
   }
-
-  // TODO: remove this logic, replace Ad impression with pixel tracking in ad's iframe
-  analytics.trackImpression(config, adData.id, containerId);
 }
 
 function createAdIframe(adData, width, height) {
