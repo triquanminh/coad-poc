@@ -7,10 +7,9 @@ const { v4: uuidv4 } = require('uuid');
 const app = express();
 const PORT = process.env.PORT || 3002;
 
-// Configure DynamoDB client for local development
 const ddbClient = new DynamoDBClient({
   region: 'us-east-1',
-  endpoint: 'http://localhost:8000', // DynamoDB Local endpoint
+  endpoint: 'http://localhost:8000',
   credentials: {
     accessKeyId: 'dummy',
     secretAccessKey: 'dummy'
@@ -19,12 +18,10 @@ const ddbClient = new DynamoDBClient({
 
 const ddbDocClient = DynamoDBDocumentClient.from(ddbClient);
 
-// 1x1 transparent GIF in base64
 const gifBase64 = "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 
-// Middleware
 app.use(cors({
-  origin: true, // Allow all origins for development
+  origin: true,
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
   credentials: true
@@ -32,7 +29,6 @@ app.use(cors({
 
 app.use(express.json());
 
-// Health check endpoint
 app.get('/health', (req, res) => {
   res.json({
     status: 'healthy',
@@ -42,27 +38,24 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Track impression endpoint
 app.get('/track/impression', async (req, res) => {
   try {
     const adId = req.query.adId || 'unknown';
     const slot = req.query.slot || 'unknown';
     const publisherId = req.query.publisherId || 'unknown';
-    
-    // Get client information
+
     const ip = req.ip || req.connection.remoteAddress || 'unknown';
     const userAgent = req.headers['user-agent'] || '';
     const refererUrl = req.headers['referer'] || req.headers['referrer'] || 'unknown';
-    
+
     const timestamp = new Date().toISOString();
     const impressionId = uuidv4();
 
     console.log(`[IMPRESSION] AdId: ${adId}, Slot: ${slot}, Publisher: ${publisherId}, IP: ${ip}`);
 
-    // Prepare DynamoDB item
     const impressionData = {
-      impressionId: impressionId,        // Primary key
-      timestamp: timestamp,              // Sort key
+      impressionId: impressionId,
+      timestamp: timestamp,
       adId: adId,
       slot: slot,
       publisherId: publisherId,
@@ -72,17 +65,15 @@ app.get('/track/impression', async (req, res) => {
       createdAt: timestamp
     };
 
-    // Write to DynamoDB
     const putCommand = new PutCommand({
       TableName: 'AdImpressionEvents',
       Item: impressionData
     });
 
     await ddbDocClient.send(putCommand);
-    
+
     console.log(`[IMPRESSION] Successfully logged impression: ${impressionId}`);
 
-    // Return 1x1 transparent GIF
     res.set({
       'Content-Type': 'image/gif',
       'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
@@ -90,20 +81,19 @@ app.get('/track/impression', async (req, res) => {
       'Expires': '0',
       'Content-Length': '43',
     });
-    
+
     const gifBuffer = Buffer.from(gifBase64, 'base64');
     res.send(gifBuffer);
 
   } catch (error) {
     console.error('[IMPRESSION ERROR]', error);
-    
-    // Still return the pixel even if logging fails
+
     res.set({
       'Content-Type': 'image/gif',
       'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
       'Content-Length': '43',
     });
-    
+
     const gifBuffer = Buffer.from(gifBase64, 'base64');
     res.send(gifBuffer);
   }
@@ -112,8 +102,6 @@ app.get('/track/impression', async (req, res) => {
 // Get impression stats (for debugging/monitoring)
 app.get('/stats', async (req, res) => {
   try {
-    // This is a simple endpoint for monitoring
-    // In production, you might want to implement proper aggregation
     res.json({
       status: 'tracking_active',
       timestamp: new Date().toISOString(),
@@ -128,7 +116,6 @@ app.get('/stats', async (req, res) => {
   }
 });
 
-// Error handling middleware
 app.use((err, req, res, next) => {
   console.error('[SERVER ERROR]', err);
   res.status(500).json({
@@ -137,7 +124,6 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start server
 app.listen(PORT, () => {
   console.log(`COAD Tracking Server running on http://localhost:${PORT}`);
   console.log('Available endpoints:');
