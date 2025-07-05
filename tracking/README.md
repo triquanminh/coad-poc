@@ -14,7 +14,7 @@ A Node.js server for tracking ad impressions and writing to DynamoDB.
 ### 1. Install Dependencies
 
 ```bash
-cd coad/coad-tracking
+cd coad-tracking
 npm install
 ```
 
@@ -31,7 +31,10 @@ tar -xzf dynamodb_local_latest.tar.gz
 
 ```bash
 # Start DynamoDB Local (runs on port 8000)
-npm run start-dynamodb
+npm run dynamodb
+
+# OR start DynamoDB + Admin UI together
+npm run db-with-ui
 ```
 
 ### 4. Setup Database Tables
@@ -41,10 +44,20 @@ npm run start-dynamodb
 npm run setup-dynamodb
 ```
 
-### 5. Start Tracking Server
+### 5. Start Services
 
+**Option A: Start everything together (recommended for development)**
 ```bash
-# Start the tracking server (runs on port 3001)
+# Starts DynamoDB + Admin UI + Tracking Server
+npm run dev-full
+```
+
+**Option B: Start services individually**
+```bash
+# Start DynamoDB + Admin UI
+npm run db-with-ui
+
+# Then in another terminal, start tracking server
 npm start
 
 # Or for development with auto-reload

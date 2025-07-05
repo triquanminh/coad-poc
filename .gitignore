@@ -146,8 +146,8 @@ Thumbs.db
 # pnpm-lock.yaml
 
 # Build outputs specific to this project
-coad/platform/dist/
-coad/admin/dist/
+platform/dist/
+admin/dist/
 publishers/portfolio/dist/
 
 # Local development files
@@ -177,5 +177,5 @@ config/development.json
 config/production.json
 
 # DynamoDB Local files (COAD Tracking)
-coad/coad-tracking/dynamodb-local/
-coad/coad-tracking/shared-local-instance.db
+tracking/dynamodb-local/
+tracking/shared-local-instance.db
