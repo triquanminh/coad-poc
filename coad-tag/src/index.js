@@ -3,9 +3,6 @@ import {
   CONTAINER_CREATION_MAX_RETRIES,
   CONTAINER_INITIAL_RETRY_DELAY,
   CONTAINER_MAX_RETRY_DELAY,
-  AD_REQUEST_TIMEOUT,
-  AD_MAX_LOAD_RETRIES,
-  AD_INITIAL_RETRY_DELAY,
   createConfig
 } from './config.js';
 import {
@@ -58,13 +55,10 @@ const setupCoAdTag = (config) => {
 const startInitialization = () => {
   initCoAdTag().catch(error => {
     console.error('[CoAd Tag] Initialization failed:', error);
-    console.error('[CoAd Tag] Error details:', error.message);
 
     // If it's a publisher ID error, show helpful message
     if (error.message.includes('Publisher ID is required')) {
       console.warn('[CoAd Tag] To fix this: Ensure your script tag includes the publisherId parameter');
-      console.warn('[CoAd Tag] Example: <script src="http://localhost:4001/src/index.js?publisherId=your-publisher-id" type="module" async></script>');
-      console.warn('[CoAd Tag] Get your publisher ID from the CoAd Publisher Dashboard');
     } else if (error.message.includes('not found')) {
       console.warn('[CoAd Tag] Publisher configuration not found. Please check your publisher ID or register at the CoAd publisher dashboard');
     }
@@ -103,7 +97,6 @@ const initCoAdTag = async () => {
     logger.log('Publisher config loaded:', tagConfig);
 
     await createAdContainersWithRetry();
-    setupAdRefresh();
     containerManager.injectStyles();
     containerManager.setupDOMObserver(
       tagConfig,
@@ -118,7 +111,6 @@ const initCoAdTag = async () => {
     EventDispatcher.dispatch('CoAd:initialized', {
       coadTag: {
         init: initCoAdTag,
-        refresh: refreshAds,
         forceReinit: forceReinitialize,
         getStatus: getCoAdTagStatus,
         destroy: destroyCoAdTag
@@ -212,22 +204,6 @@ const loadAdForContainer = async (containerId, retryCount = 0) => {
   }
 };
 
-// TODO: remove this logic
-const setupAdRefresh = () => {
-  if (tagConfig.refreshInterval > 0) {
-    setInterval(() => {
-      logger.log('Refreshing ads...');
-      loadAds();
-    }, tagConfig.refreshInterval);
-  }
-};
-
-// Public API methods
-const refreshAds = () => {
-  logger.log('Manual ad refresh triggered');
-  loadAds();
-};
-
 const forceReinitialize = () => {
   logger.log('Force re-initialization triggered');
   isInitialized = false;
@@ -266,6 +242,7 @@ const destroyCoAdTag = () => {
   window.CoAd = window.CoAd || {};
 
   // Setup configuration and services
+  // Support both COADConfig (all caps) and CoAdConfig (mixed case) for backward compatibility
   const config = window.CoAdConfig || {};
   setupCoAdTag(config);
 
@@ -298,7 +275,6 @@ const destroyCoAdTag = () => {
   // Expose Tag methods globally
   window.CoAd.tag = {
     init: initCoAdTag,
-    refresh: refreshAds,
     forceReinit: forceReinitialize,
     getStatus: getCoAdTagStatus,
     destroy: destroyCoAdTag
