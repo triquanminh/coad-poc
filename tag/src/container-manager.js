@@ -5,54 +5,50 @@ const createAdContainers = (logger, analytics, config, adContainers) => {
   logger.log('Processing placements:', placements);
 
   placements.forEach((placementDetail, placementIndex) => {
-    try {
-      const slotType = placementDetail.slot_type;
-      if (slotType === 'catfish') {
-        createCatfishAd(logger, analytics, config, placementDetail, adContainers);
-        return;
-      }
-
-      const placement = placementDetail.selector || placementDetail;
-      const elements = document.querySelectorAll(placement);
-      logger.log(`Looking for placement: ${placement}, found ${elements.length} elements`);
-
-      if (elements.length === 0) {
-        logger.log(`No elements found for selector "${placement}"`);
-        return;
-      }
-
-      // TODO: TBU on whether we will mount to all matched selector
-      elements.forEach((element, elementIndex) => {
-        const containerId = `CoAd-ad-${config.publisherId}-${placementIndex}-${elementIndex}`;
-        if (adContainers.has(containerId)) {
-          logger.log(`Container ${containerId} already exists, skipping`);
-          return;
-        }
-
-        const adContainer = DOMUtils.createElement('div', {
-          id: containerId,
-          class: 'CoAd-ad-container',
-          'data-placement': placement,
-          'data-publisher': config.publisherId,
-          ...(placementDetail.slot_type && { 'data-slot-type': placementDetail.slot_type })
-        });
-
-        applySlotStyling(logger, adContainer, placementDetail);
-        insertAdContainer(logger, adContainer, element, placementDetail);
-        adContainers.set(containerId, {
-          element: adContainer,
-          placement: placement,
-          targetElement: element,
-          slotType: placementDetail.slot_type,
-          placementDetail: placementDetail
-        });
-
-        analytics.trackContainerCreated(config, containerId, placement, placementDetail.slot_type);
-        logger.log(`Created ad container: ${containerId} for placement: ${placement} (slot: ${placementDetail.slot_type || 'custom'})`);
-      });
-    } catch (error) {
-      logger.error(`Failed to create container for placement ${placementDetail.selector || placementDetail}:`, error);
+    const slotType = placementDetail.slot_type;
+    if (slotType === 'catfish') {
+      createCatfishAd(logger, analytics, config, placementDetail, adContainers);
+      return;
     }
+
+    const placement = placementDetail.selector || placementDetail;
+    const elements = document.querySelectorAll(placement);
+    logger.log(`Looking for placement: ${placement}, found ${elements.length} elements`);
+
+    if (elements.length === 0) {
+      logger.log(`No elements found for selector "${placement}"`);
+      return;
+    }
+
+    // TODO: TBU on whether we will mount to all matched selector
+    elements.forEach((element, elementIndex) => {
+      const containerId = `CoAd-ad-${config.publisherId}-${placementIndex}-${elementIndex}`;
+      if (adContainers.has(containerId)) {
+        logger.log(`Container ${containerId} already exists, skipping`);
+        return;
+      }
+
+      const adContainer = DOMUtils.createElement('div', {
+        id: containerId,
+        class: 'CoAd-ad-container',
+        'data-placement': placement,
+        'data-publisher': config.publisherId,
+        ...(placementDetail.slot_type && { 'data-slot-type': placementDetail.slot_type })
+      });
+
+      applySlotStyling(logger, adContainer, placementDetail);
+      insertAdContainer(logger, adContainer, element, placementDetail);
+      adContainers.set(containerId, {
+        element: adContainer,
+        placement: placement,
+        targetElement: element,
+        slotType: placementDetail.slot_type,
+        placementDetail: placementDetail
+      });
+
+      analytics.trackContainerCreated(config, containerId, placement, placementDetail.slot_type);
+      logger.log(`Created ad container: ${containerId} for placement: ${placement} (slot: ${placementDetail.slot_type || 'custom'})`);
+    });
   });
 }
 

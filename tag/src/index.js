@@ -21,6 +21,7 @@ let containerManager = null;
 let adContainers = new Map();
 let loadedAds = new Map();
 let isInitialized = false;
+let initializationAttempted = false;
 let initStartTime = null;
 
 const setupCoAdTag = (config) => {
@@ -46,55 +47,48 @@ const initCoAdTag = async () => {
   }
 
   initStartTime = Date.now();
-  try {
-    await apiClient.checkConnectivity(tagConfig);
-    if (!tagConfig.publisherId) {
-      throw new Error('Publisher ID is required. Please ensure the script tag includes ?publisherId=your-publisher-id parameter.');
-    }
 
-    const apiConfig = await apiClient.fetchPublisherConfigById(tagConfig);
-    Object.assign(tagConfig, apiConfig);
-    if (!tagConfig.publisherId) {
-      throw new Error('Unable to get Publisher ID. Please register this website in the CoAd Publisher Dashboard');
-    }
-
-    await createAdContainers();
-    containerManager.injectStyles();
-    containerManager.setupDOMObserver(
-      tagConfig,
-      () => containerManager.createAdContainers(tagConfig, adContainers),
-      () => loadAds()
-    );
-
-    isInitialized = true;
-    logger.log('CoAd Tag initialized successfully');
-
-    EventDispatcher.dispatch('CoAd:initialized', {
-      coadTag: {
-        init: initCoAdTag,
-        forceReinit: forceReinitialize,
-        getStatus: getCoAdTagStatus,
-        destroy: destroyCoAdTag
-      }
-    });
-  } catch (error) {
-    logger.error('Failed to initialize:', error);
+  await apiClient.checkConnectivity(tagConfig);
+  if (!tagConfig.publisherId) {
+    throw new Error('Publisher ID is required. Please ensure the script tag includes ?publisherId=your-publisher-id parameter.');
   }
+
+  const apiConfig = await apiClient.fetchPublisherConfigById(tagConfig);
+  Object.assign(tagConfig, apiConfig);
+  if (!tagConfig.publisherId) {
+    throw new Error('Unable to get Publisher ID. Please register this website in the CoAd Publisher Dashboard');
+  }
+
+  await createAdContainers();
+  containerManager.injectStyles();
+  containerManager.setupDOMObserver(
+    tagConfig,
+    () => containerManager.createAdContainers(tagConfig, adContainers),
+    () => loadAds()
+  );
+
+  isInitialized = true;
+  logger.log('CoAd Tag initialized successfully');
+
+  EventDispatcher.dispatch('CoAd:initialized', {
+    coadTag: {
+      init: initCoAdTag,
+      forceReinit: forceReinitialize,
+      getStatus: getCoAdTagStatus,
+      destroy: destroyCoAdTag
+    }
+  });
 };
 
 const createAdContainers = async () => {
-  try {
-    logger.log('Creating ad containers');
-    containerManager.createAdContainers(tagConfig, adContainers);
+  logger.log('Creating ad containers');
+  containerManager.createAdContainers(tagConfig, adContainers);
 
-    if (adContainers.size > 0) {
-      logger.log(`Successfully created ${adContainers.size} ad containers`);
-      await loadAds();
-    } else {
-      logger.error('No containers created');
-    }
-  } catch (error) {
-    logger.error('Failed to create ad containers:', error);
+  if (adContainers.size > 0) {
+    logger.log(`Successfully created ${adContainers.size} ad containers`);
+    await loadAds();
+  } else {
+    throw new Error('No containers created');
   }
 };
 
@@ -103,21 +97,18 @@ const loadAds = async () => {
     loadAdForContainer(containerId)
   );
 
-  try {
-    await Promise.all(loadPromises);
-    logger.log('All ads loaded successfully');
-  } catch (error) {
-    logger.error('Some ads failed to load:', error);
-  }
+  await Promise.all(loadPromises);
+  logger.log('All ads loaded successfully');
 };
 
 const loadAdForContainer = async (containerId) => {
   const container = adContainers.get(containerId);
   if (!container) {
-    logger.error(`Container not found: ${containerId}`);
-    return;
+    throw new Error(`Container not found: ${containerId}`);
   }
 
+  // Keep try-catch here for individual ad loading - we want to handle ad failures gracefully
+  // without breaking the entire initialization process
   try {
     container.element.innerHTML = '<div class="CoAd-ad-loading">Loading ad...</div>';
     const adData = tagConfig.adsData && tagConfig.adsData[container.placement];
@@ -129,6 +120,7 @@ const loadAdForContainer = async (containerId) => {
     loadedAds.set(containerId, { ad: adData, success: true });
     logger.log(`Ad successfully loaded for container: ${containerId}`);
   } catch (error) {
+    // Individual ad failures should be handled gracefully
     logger.error(`Failed to load ad for container ${containerId}:`, error);
     analytics.trackAdLoadFailure(tagConfig, containerId, error);
 
@@ -139,12 +131,27 @@ const loadAdForContainer = async (containerId) => {
   }
 };
 
-const forceReinitialize = () => {
+const forceReinitialize = async () => {
   logger.log('Force re-initialization triggered');
   isInitialized = false;
+  initializationAttempted = false; // Reset the attempt flag for force reinit
   adContainers.clear();
   loadedAds.clear();
-  initCoAdTag();
+
+  try {
+    await initCoAdTag();
+  } catch (error) {
+    logger.error('Force re-initialization failed:', error);
+
+    // Send error to API if possible
+    if (apiClient && tagConfig) {
+      try {
+        await apiClient.sendErrorLog(tagConfig, error.message);
+      } catch (logError) {
+        logger.error('Failed to send error log:', logError);
+      }
+    }
+  }
 };
 
 const getCoAdTagStatus = () => {
@@ -173,6 +180,31 @@ const destroyCoAdTag = () => {
 (() => {
   'use strict';
 
+  // Centralized error handling wrapper
+  const safeInitialize = async () => {
+    // Prevent multiple initialization attempts
+    if (isInitialized || initializationAttempted) {
+      return;
+    }
+
+    initializationAttempted = true;
+
+    try {
+      await initCoAdTag();
+    } catch (error) {
+      logger.error('CoAd Tag initialization failed:', error);
+
+      // Send error to API if possible
+      if (apiClient && tagConfig) {
+        try {
+          await apiClient.sendErrorLog(tagConfig, error.message);
+        } catch (logError) {
+          logger.error('Failed to send error log:', logError);
+        }
+      }
+    }
+  };
+
   // TODO: 2 mode for production/debug
   window.CoAd = window.CoAd || {};
 
@@ -181,27 +213,23 @@ const destroyCoAdTag = () => {
 
   // Strategy 1: DOM Content Loaded
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initCoAdTag);
+    document.addEventListener('DOMContentLoaded', safeInitialize);
   } else if (document.readyState === 'interactive') {
     // Strategy 2: DOM is interactive but not fully loaded
-    setTimeout(initCoAdTag, 500);
+    setTimeout(safeInitialize, 500);
   } else {
     // Strategy 3: DOM is fully loaded
-    initCoAdTag();
+    safeInitialize();
   }
 
   // Strategy 4: Window load event (fallback for React apps)
   window.addEventListener('load', () => {
-    if (!getCoAdTagStatus().initialized) {
-      initCoAdTag();
-    }
+    safeInitialize();
   });
 
   // Strategy 5: Delayed initialization for React apps
   setTimeout(() => {
-    if (!getCoAdTagStatus().initialized) {
-      initCoAdTag();
-    }
+    safeInitialize();
   }, 1000);
 
   // TODO: remove in production
