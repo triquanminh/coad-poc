@@ -180,8 +180,7 @@ const destroyCoAdTag = () => {
 (() => {
   'use strict';
 
-  // Centralized error handling wrapper
-  const safeInitialize = async () => {
+  const initialize = async () => {
     // Prevent multiple initialization attempts
     if (isInitialized || initializationAttempted) {
       return;
@@ -194,7 +193,6 @@ const destroyCoAdTag = () => {
     } catch (error) {
       logger.error('CoAd Tag initialization failed:', error);
 
-      // Send error to API if possible
       if (apiClient && tagConfig) {
         try {
           await apiClient.sendErrorLog(tagConfig, error.message);
@@ -213,23 +211,23 @@ const destroyCoAdTag = () => {
 
   // Strategy 1: DOM Content Loaded
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', safeInitialize);
+    document.addEventListener('DOMContentLoaded', initialize);
   } else if (document.readyState === 'interactive') {
     // Strategy 2: DOM is interactive but not fully loaded
-    setTimeout(safeInitialize, 500);
+    setTimeout(initialize, 500);
   } else {
     // Strategy 3: DOM is fully loaded
-    safeInitialize();
+    initialize();
   }
 
   // Strategy 4: Window load event (fallback for React apps)
   window.addEventListener('load', () => {
-    safeInitialize();
+    initialize();
   });
 
   // Strategy 5: Delayed initialization for React apps
   setTimeout(() => {
-    safeInitialize();
+    initialize();
   }, 1000);
 
   // TODO: remove in production
